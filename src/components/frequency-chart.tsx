@@ -59,7 +59,7 @@ export function FrequencyChart({ data, title = "Frequência dos Números" }: Fre
                 borderRadius: "8px",
               }}
               labelStyle={{ color: "#fff" }}
-              formatter={(value: number) => [`${value} vezes`, "Frequência"]}
+              formatter={(value) => [`${value} vezes`, "Frequência"]}
               labelFormatter={(label) => `Número ${label}`}
             />
             <Bar dataKey="frequency" radius={[2, 2, 0, 0]}>

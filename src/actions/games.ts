@@ -205,7 +205,7 @@ export async function getUserGamesForContest(contestNumber: number): Promise<Gam
       orderBy: { createdAt: "desc" },
     });
 
-    return games.map((game) => ({
+    return games.map((game: typeof games[number]) => ({
       id: game.id,
       numbers: game.numbers,
       explanation: game.explanation,
