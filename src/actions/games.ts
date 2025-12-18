@@ -151,7 +151,7 @@ export async function getUserGames(): Promise<GameWithResult[]> {
 
     // Get drawn numbers for games with results
     const gamesWithResults: GameWithResult[] = await Promise.all(
-      games.map(async (game) => {
+      games.map(async (game: typeof games[number]) => {
         let drawnNumbers: number[] | undefined;
         
         // Get contest data if it exists
