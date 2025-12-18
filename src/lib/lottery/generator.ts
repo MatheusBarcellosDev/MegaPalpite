@@ -44,7 +44,7 @@ const STRATEGIES: Record<GenerationStrategy, StrategyConfig> = {
 };
 
 export function getAvailableStrategies() {
-  return Object.entries(STRATEGIES).map(([key, config]) => ({
+  return Object.entries(STRATEGIES).map(([key, config]: [string, StrategyConfig]) => ({
     id: key as GenerationStrategy,
     name: config.name,
     description: config.description,
@@ -71,20 +71,20 @@ export async function calculateFrequencyFromDB(
   }
 
   // Conta frequência
-  contests.forEach((contest) => {
-    contest.drawnNumbers.forEach((num) => {
+  contests.forEach((contest: { drawnNumbers: number[] }) => {
+    contest.drawnNumbers.forEach((num: number) => {
       frequency[num]++;
     });
   });
 
   // Converte para array ordenado
   return Object.entries(frequency)
-    .map(([number, count]) => ({
+    .map(([number, count]: [string, number]) => ({
       number: parseInt(number),
       frequency: count,
       percentage: (count / contests.length) * 100,
     }))
-    .sort((a, b) => b.frequency - a.frequency);
+    .sort((a: { frequency: number }, b: { frequency: number }) => b.frequency - a.frequency);
 }
 
 /**
@@ -98,8 +98,8 @@ export async function getDelayedNumbers(threshold: number = 20): Promise<number[
   });
 
   const recentNumbers = new Set<number>();
-  contests.forEach((contest) => {
-    contest.drawnNumbers.forEach((num) => recentNumbers.add(num));
+  contests.forEach((contest: { drawnNumbers: number[] }) => {
+    contest.drawnNumbers.forEach((num: number) => recentNumbers.add(num));
   });
 
   // Números que NÃO apareceram nos últimos 'threshold' sorteios
@@ -156,33 +156,33 @@ export async function generateNumbersWithStrategy(
   const delayed = await getDelayedNumbers(30);
 
   // Separa números por categoria
-  const hotNumbers = frequency.slice(0, 15).map((f) => f.number); // Top 15 mais frequentes
-  const coldNumbers = delayed.length > 0 ? delayed : frequency.slice(-15).map((f) => f.number);
-  const balancedNumbers = frequency.slice(15, 45).map((f) => f.number); // Meio da tabela
+  const hotNumbers = frequency.slice(0, 15).map((f: NumberFrequency) => f.number); // Top 15 mais frequentes
+  const coldNumbers = delayed.length > 0 ? delayed : frequency.slice(-15).map((f: NumberFrequency) => f.number);
+  const balancedNumbers = frequency.slice(15, 45).map((f: NumberFrequency) => f.number); // Meio da tabela
 
   const selected: Set<number> = new Set();
 
   // Função auxiliar para selecionar números aleatórios de um pool
   const selectRandom = (pool: number[], count: number): number[] => {
-    const available = pool.filter((n) => !selected.has(n));
+    const available = pool.filter((n: number) => !selected.has(n));
     const shuffled = fisherYatesShuffle([...available]);
     return shuffled.slice(0, count);
   };
 
   // Seleciona de acordo com a estratégia
   const fromHot = selectRandom(hotNumbers, config.hotNumbers);
-  fromHot.forEach((n) => selected.add(n));
+  fromHot.forEach((n: number) => selected.add(n));
 
   const fromCold = selectRandom(coldNumbers, config.coldNumbers);
-  fromCold.forEach((n) => selected.add(n));
+  fromCold.forEach((n: number) => selected.add(n));
 
   const fromBalanced = selectRandom(balancedNumbers, config.balancedNumbers);
-  fromBalanced.forEach((n) => selected.add(n));
+  fromBalanced.forEach((n: number) => selected.add(n));
 
   // Se ainda faltam números, completa do pool geral
   while (selected.size < 6) {
-    const allAvailable = Array.from({ length: 60 }, (_, i) => i + 1).filter(
-      (n) => !selected.has(n)
+    const allAvailable = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1).filter(
+      (n: number) => !selected.has(n)
     );
     const random = allAvailable[Math.floor(Math.random() * allAvailable.length)];
     selected.add(random);
@@ -210,16 +210,16 @@ function applyStatisticalConstraints(
   frequency: NumberFrequency[]
 ): number[] {
   let result = [...numbers];
-  const frequencyMap = new Map(frequency.map((f) => [f.number, f]));
+  const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
 
   // Verifica equilíbrio par/ímpar (2-4 de cada)
-  const oddCount = result.filter((n) => n % 2 === 1).length;
+  const oddCount = result.filter((n: number) => n % 2 === 1).length;
   if (oddCount < 2 || oddCount > 4) {
     result = rebalance(result, frequencyMap, "oddEven");
   }
 
   // Verifica equilíbrio alto/baixo (2-4 de cada)
-  const lowCount = result.filter((n) => n <= 30).length;
+  const lowCount = result.filter((n: number) => n <= 30).length;
   if (lowCount < 2 || lowCount > 4) {
     result = rebalance(result, frequencyMap, "highLow");
   }
@@ -249,8 +249,8 @@ function rebalance(
       const toRemove = result.find((n) => !isTarget(n));
       if (toRemove !== undefined) {
         const idx = result.indexOf(toRemove);
-        const candidates = Array.from({ length: 60 }, (_, i) => i + 1)
-          .filter((n) => isTarget(n) && !result.includes(n));
+        const candidates = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1)
+          .filter((n: number) => isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
         }
@@ -260,8 +260,8 @@ function rebalance(
       const toRemove = result.find(isTarget);
       if (toRemove !== undefined) {
         const idx = result.indexOf(toRemove);
-        const candidates = Array.from({ length: 60 }, (_, i) => i + 1)
-          .filter((n) => !isTarget(n) && !result.includes(n));
+        const candidates = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1)
+          .filter((n: number) => !isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
         }
@@ -277,7 +277,7 @@ function removeExcessiveSequentials(
   numbers: number[],
   frequencyMap: Map<number, NumberFrequency>
 ): number[] {
-  const sorted = [...numbers].sort((a, b) => a - b);
+  const sorted = [...numbers].sort((a: number, b: number) => a - b);
   
   // Conta sequências
   let maxSequence = 1;
@@ -297,8 +297,8 @@ function removeExcessiveSequentials(
     // Encontra o número do meio da sequência e substitui
     for (let i = 1; i < sorted.length - 1; i++) {
       if (sorted[i] === sorted[i - 1] + 1 && sorted[i] === sorted[i + 1] - 1) {
-        const candidates = Array.from({ length: 60 }, (_, j) => j + 1)
-          .filter((n) => !sorted.includes(n) && Math.abs(n - sorted[i - 1]) > 1 && Math.abs(n - sorted[i + 1]) > 1);
+        const candidates = Array.from({ length: 60 }, (_: unknown, j: number) => j + 1)
+          .filter((n: number) => !sorted.includes(n) && Math.abs(n - sorted[i - 1]) > 1 && Math.abs(n - sorted[i + 1]) > 1);
         if (candidates.length > 0) {
           sorted[i] = candidates[Math.floor(Math.random() * candidates.length)];
           break;
@@ -314,16 +314,16 @@ function calculateGameStats(
   numbers: number[],
   frequency: NumberFrequency[]
 ): GenerationStats {
-  const frequencyMap = new Map(frequency.map((f) => [f.number, f.frequency]));
+  const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f.frequency]));
 
-  const oddCount = numbers.filter((n) => n % 2 === 1).length;
+  const oddCount = numbers.filter((n: number) => n % 2 === 1).length;
   const evenCount = 6 - oddCount;
-  const lowCount = numbers.filter((n) => n <= 30).length;
+  const lowCount = numbers.filter((n: number) => n <= 30).length;
   const highCount = 6 - lowCount;
-  const sum = numbers.reduce((a, b) => a + b, 0);
+  const sum = numbers.reduce((a: number, b: number) => a + b, 0);
   
   // Conta consecutivos
-  const sorted = [...numbers].sort((a, b) => a - b);
+  const sorted = [...numbers].sort((a: number, b: number) => a - b);
   let consecutiveCount = 0;
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i] === sorted[i - 1] + 1) {
@@ -333,7 +333,7 @@ function calculateGameStats(
 
   // Média de frequência dos números escolhidos
   const avgFrequency =
-    numbers.reduce((sum, n) => sum + (frequencyMap.get(n) || 0), 0) / 6;
+    numbers.reduce((sum: number, n: number) => sum + (frequencyMap.get(n) || 0), 0) / 6;
 
   return {
     oddCount,
@@ -360,7 +360,7 @@ function fisherYatesShuffle<T>(array: T[]): T[] {
  */
 export function countMatches(userNumbers: number[], drawnNumbers: number[]): number {
   const drawnSet = new Set(drawnNumbers);
-  return userNumbers.filter((n) => drawnSet.has(n)).length;
+  return userNumbers.filter((n: number) => drawnSet.has(n)).length;
 }
 
 /**
@@ -372,9 +372,9 @@ export function generateExplanationContext(
   strategy: GenerationStrategy
 ): string {
   const strategyConfig = STRATEGIES[strategy];
-  const frequencyMap = new Map(frequency.map((f) => [f.number, f]));
+  const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
 
-  const numbersInfo = numbers.map((n) => {
+  const numbersInfo = numbers.map((n: number) => {
     const freq = frequencyMap.get(n);
     return `${n} (apareceu ${freq?.frequency || 0}x nos últimos 100 sorteios)`;
   });
@@ -389,10 +389,10 @@ Detalhes:
 ${numbersInfo.join("\n")}
 
 Estatísticas do jogo:
-- Ímpares: ${numbers.filter((n) => n % 2 === 1).length}
-- Pares: ${numbers.filter((n) => n % 2 === 0).length}
-- Baixos (1-30): ${numbers.filter((n) => n <= 30).length}
-- Altos (31-60): ${numbers.filter((n) => n > 30).length}
-- Soma total: ${numbers.reduce((a, b) => a + b, 0)}
+- Ímpares: ${numbers.filter((n: number) => n % 2 === 1).length}
+- Pares: ${numbers.filter((n: number) => n % 2 === 0).length}
+- Baixos (1-30): ${numbers.filter((n: number) => n <= 30).length}
+- Altos (31-60): ${numbers.filter((n: number) => n > 30).length}
+- Soma total: ${numbers.reduce((a: number, b: number) => a + b, 0)}
 `;
 }
