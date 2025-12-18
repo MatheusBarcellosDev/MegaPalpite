@@ -33,8 +33,8 @@ export async function getNumberFrequency(contestCount: number = 100): Promise<Fr
   }
 
   // Count frequency
-  contests.forEach((contest) => {
-    contest.drawnNumbers.forEach((num) => {
+  contests.forEach((contest: { drawnNumbers: number[] }) => {
+    contest.drawnNumbers.forEach((num: number) => {
       frequency[num]++;
     });
   });
@@ -66,8 +66,8 @@ export async function getHotColdNumbers(): Promise<HotColdData> {
     frequency[i] = 0;
   }
 
-  recentContests.forEach((contest) => {
-    contest.drawnNumbers.forEach((num) => {
+  recentContests.forEach((contest: { drawnNumbers: number[] }) => {
+    contest.drawnNumbers.forEach((num: number) => {
       frequency[num]++;
     });
   });
@@ -85,8 +85,8 @@ export async function getHotColdNumbers(): Promise<HotColdData> {
     lastSeen[i] = 100; // Default: not seen in last 100
   }
 
-  allContests.forEach((contest, index) => {
-    contest.drawnNumbers.forEach((num) => {
+  allContests.forEach((contest: { id: number; drawnNumbers: number[] }, index: number) => {
+    contest.drawnNumbers.forEach((num: number) => {
       if (lastSeen[num] === 100) {
         lastSeen[num] = index;
       }
@@ -134,12 +134,12 @@ export async function getUserResultsHistory(userId: string): Promise<{
     where: { id: { in: contestNumbers } },
     select: { id: true, drawDate: true },
   });
-  const contestDateMap = new Map(contests.map((c) => [c.id, c.drawDate]));
+  const contestDateMap = new Map(contests.map((c: { id: number; drawDate: Date }) => [c.id, c.drawDate]));
 
   // Build history data
   const data = games
-    .filter((g) => g.result)
-    .map((g) => ({
+    .filter((g: typeof games[number]) => g.result)
+    .map((g: typeof games[number]) => ({
       contestNumber: g.contestNumber,
       hits: g.result!.hits,
       date: contestDateMap.get(g.contestNumber)?.toISOString().split("T")[0] || "",
@@ -147,10 +147,10 @@ export async function getUserResultsHistory(userId: string): Promise<{
 
   // Calculate stats
   const totalGames = data.length;
-  const totalHits = data.reduce((sum, d) => sum + d.hits, 0);
+  const totalHits = data.reduce((sum: number, d: { hits: number }) => sum + d.hits, 0);
   const avgHits = totalGames > 0 ? totalHits / totalGames : 0;
-  const bestHits = totalGames > 0 ? Math.max(...data.map((d) => d.hits)) : 0;
-  const bestGame = data.find((d) => d.hits === bestHits);
+  const bestHits = totalGames > 0 ? Math.max(...data.map((d: { hits: number }) => d.hits)) : 0;
+  const bestGame = data.find((d: { contestNumber: number; hits: number }) => d.hits === bestHits);
 
   return {
     data,
