@@ -129,7 +129,7 @@ export async function getUserResultsHistory(userId: string): Promise<{
   });
 
   // Get contest dates
-  const contestNumbers = [...new Set(games.map((g) => g.contestNumber))];
+  const contestNumbers = [...new Set(games.map((g: typeof games[number]) => g.contestNumber))];
   const contests = await prisma.contest.findMany({
     where: { id: { in: contestNumbers } },
     select: { id: true, drawDate: true },
