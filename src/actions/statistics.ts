@@ -103,8 +103,8 @@ export async function getHotColdNumbers(): Promise<HotColdData> {
     .sort((a, b) => b.lastSeen - a.lastSeen);
 
   return {
-    hotNumbers: sortedByFrequency.slice(0, 10).map((n) => n.number),
-    coldNumbers: sortedByLastSeen.slice(0, 10).map((n) => n.number),
+    hotNumbers: sortedByFrequency.slice(0, 10).map((n: { number: number }) => n.number),
+    coldNumbers: sortedByLastSeen.slice(0, 10).map((n: { number: number }) => n.number),
     hotNumbersDetailed: sortedByFrequency.slice(0, 10),
     coldNumbersDetailed: sortedByLastSeen.slice(0, 10),
   };
@@ -134,16 +134,22 @@ export async function getUserResultsHistory(userId: string): Promise<{
     where: { id: { in: contestNumbers } },
     select: { id: true, drawDate: true },
   });
-  const contestDateMap = new Map(contests.map((c: { id: number; drawDate: Date }) => [c.id, c.drawDate]));
+  const contestDateMap = new Map<number, Date>();
+  contests.forEach((c: { id: number; drawDate: Date }) => {
+    contestDateMap.set(c.id, c.drawDate);
+  });
 
   // Build history data
   const data = games
     .filter((g: typeof games[number]) => g.result)
-    .map((g: typeof games[number]) => ({
-      contestNumber: g.contestNumber,
-      hits: g.result!.hits,
-      date: contestDateMap.get(g.contestNumber)?.toISOString().split("T")[0] || "",
-    }));
+    .map((g: typeof games[number]) => {
+      const drawDate = contestDateMap.get(g.contestNumber);
+      return {
+        contestNumber: g.contestNumber,
+        hits: g.result!.hits,
+        date: drawDate ? drawDate.toISOString().split("T")[0] : "",
+      };
+    });
 
   // Calculate stats
   const totalGames = data.length;

@@ -22,7 +22,10 @@ interface LotteryContest {
 }
 
 function parseDate(dateStr: string): Date {
-  const [day, month, year] = dateStr.split("/").map(Number);
+  const parts = dateStr.split("/");
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
   return new Date(year, month - 1, day);
 }
 
@@ -35,7 +38,7 @@ async function checkAndNotifyUsers(contestNumber: number, drawnNumbers: number[]
 
   // Group games by userId
   const gamesByUser = new Map<string, typeof games>();
-  games.forEach((game) => {
+  games.forEach((game: typeof games[number]) => {
     const userGames = gamesByUser.get(game.userId) || [];
     userGames.push(game);
     gamesByUser.set(game.userId, userGames);
@@ -64,7 +67,7 @@ async function checkAndNotifyUsers(contestNumber: number, drawnNumbers: number[]
 
     // Calculate hits for each game and save results
     const gamesWithHits = await Promise.all(
-      userGames.map(async (game) => {
+      userGames.map(async (game: typeof userGames[number]) => {
         const hits = countMatches(game.numbers, drawnNumbers);
 
         // Save result if not already saved
@@ -118,7 +121,7 @@ export async function GET() {
     }
 
     const contest: LotteryContest = await response.json();
-    const drawnNumbers = contest.listaDezenas.map((n) => parseInt(n, 10));
+    const drawnNumbers = contest.listaDezenas.map((n: string) => parseInt(n, 10));
 
     // Check if we already have this contest
     const existing = await prisma.contest.findUnique({
