@@ -7,6 +7,7 @@ import { getLatestContest } from "@/lib/lottery/api";
 import { getRecentGames } from "@/actions/games";
 import { Dices, History, TrendingUp, ChevronRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 300; // Revalidate every 5 minutes
 
 export default async function DashboardPage() {

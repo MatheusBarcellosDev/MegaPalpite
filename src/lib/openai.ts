@@ -1,8 +1,19 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient() {
+  if (!openaiClient) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing OPENAI_API_KEY environment variable");
+    }
+    openaiClient = new OpenAI({
+      apiKey: apiKey,
+    });
+  }
+  return openaiClient;
+}
 
 const SYSTEM_PROMPT = `You are a friendly assistant that explains lottery number selections in Portuguese (Brazilian).
 Your role is ONLY to explain the statistical reasoning behind number choices.
@@ -23,6 +34,7 @@ The explanation should:
 
 export async function generateExplanation(context: string): Promise<string> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [

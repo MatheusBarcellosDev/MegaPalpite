@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+export const dynamic = "force-dynamic";
 import { FrequencyChart, TopNumbersLists } from "@/components/frequency-chart";
 import { getNumberFrequency, getHotColdNumbers } from "@/actions/statistics";
 import { BarChart3, TrendingUp, TrendingDown, Percent } from "lucide-react";
