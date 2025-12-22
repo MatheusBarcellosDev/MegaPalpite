@@ -109,7 +109,12 @@ export async function GET() {
   try {
     // Fetch latest contest from Caixa API
     const response = await fetch(CAIXA_API_URL, {
-      headers: { Accept: "application/json" },
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://loterias.caixa.gov.br/",
+      },
       cache: "no-store",
     });
 
