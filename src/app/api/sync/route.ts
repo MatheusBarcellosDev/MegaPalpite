@@ -5,6 +5,7 @@ import { countMatches } from "@/lib/lottery/generator";
 import { createClient } from "@supabase/supabase-js";
 
 const CAIXA_API_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena";
+const FALLBACK_API_URL = "https://loteriascaixa-api.herokuapp.com/api/megasena/latest";
 
 interface LotteryContest {
   numero: number;
@@ -19,6 +20,58 @@ interface LotteryContest {
     valorPremio: number;
     descricaoFaixa: string;
   }>;
+}
+
+// Helper function to try fetching from multiple APIs
+async function fetchContestData(): Promise<LotteryContest | null> {
+  // Try Caixa API first
+  try {
+    const response = await fetch(CAIXA_API_URL, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://loterias.caixa.gov.br/",
+      },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data as LotteryContest;
+    }
+  } catch (e) {
+    console.log("Caixa API failed, trying fallback...", e);
+  }
+
+  // Fallback to alternative API
+  try {
+    const response = await fetch(FALLBACK_API_URL, {
+      headers: { "Accept": "application/json" },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const data = await response.json();
+      // Map alternative API format to our interface
+      return {
+        numero: data.concurso,
+        dataApuracao: data.data,
+        listaDezenas: data.dezenas,
+        valorAcumuladoProximoConcurso: data.valorAcumuladoProximoConcurso || 0,
+        valorEstimadoProximoConcurso: data.valorEstimadoProximoConcurso || 0,
+        acumulado: data.acumulou,
+        listaRateioPremio: data.premiacoes?.map((p: { descricao: string; faixa: number; ganhadores: number; valorPremio: number }) => ({
+          faixa: p.faixa,
+          numeroDeGanhadores: p.ganhadores,
+          valorPremio: p.valorPremio,
+          descricaoFaixa: p.descricao,
+        })),
+      };
+    }
+  } catch (e) {
+    console.log("Fallback API also failed", e);
+  }
+
+  return null;
 }
 
 function parseDate(dateStr: string): Date {
@@ -107,25 +160,16 @@ async function checkAndNotifyUsers(contestNumber: number, drawnNumbers: number[]
 
 export async function GET() {
   try {
-    // Fetch latest contest from Caixa API
-    const response = await fetch(CAIXA_API_URL, {
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://loterias.caixa.gov.br/",
-      },
-      cache: "no-store",
-    });
+    // Fetch latest contest (tries Caixa first, then fallback)
+    const contest = await fetchContestData();
 
-    if (!response.ok) {
+    if (!contest) {
       return NextResponse.json(
-        { success: false, error: "Failed to fetch from Caixa API" },
+        { success: false, error: "Failed to fetch from all lottery APIs" },
         { status: 500 }
       );
     }
 
-    const contest: LotteryContest = await response.json();
     const drawnNumbers = contest.listaDezenas.map((n: string) => parseInt(n, 10));
 
     // Check if we already have this contest
