@@ -1,0 +1,25 @@
+name: Sync Lottery Data
+
+on:
+  schedule:
+    # Runs at 01:00 UTC on Wed, Fri, Sun (lottery draw days)
+    # Plus 02:00 UTC to catch any delays
+    - cron: '0 1 * * 3,5,0'
+    - cron: '0 2 * * 3,5,0'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  sync-lottery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Sync API
+        run: |
+          response=$(curl -s -w "\n%{http_code}" "https://mega-palpite.vercel.app/api/sync")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+          echo "Response: $body"
+          echo "HTTP Code: $http_code"
+          if [ "$http_code" -ne 200 ]; then
+            echo "Sync failed with status $http_code"
+            exit 1
+          fi
