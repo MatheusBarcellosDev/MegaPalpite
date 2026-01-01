@@ -9,8 +9,8 @@ export interface LotteryContest {
   listaDezenas: string[];
   listaRateioPremio: RateioPremio[];
   acumulado: boolean;
-  localSorteio: string;
-  nomeMunicipioUFSorteio: string;
+  localSorteio?: string;
+  nomeMunicipioUFSorteio?: string;
 }
 
 export interface RateioPremio {

@@ -1,12 +1,9 @@
 import { LotteryContest, FormattedContest } from "./types";
+import { prisma } from "@/lib/prisma";
 
 const CAIXA_API_URL =
   "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena";
-
-// Cache the latest contest for 5 minutes
-let cachedContest: FormattedContest | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const FALLBACK_API_URL = "https://loteriascaixa-api.herokuapp.com/api/megasena/latest";
 
 function formatContest(data: LotteryContest): FormattedContest {
   return {
@@ -16,9 +13,9 @@ function formatContest(data: LotteryContest): FormattedContest {
     // Use estimated value as main jackpot (this is what Caixa shows as "Estimativa de prêmio")
     jackpotValue: data.valorEstimadoProximoConcurso || data.valorAcumuladoProximoConcurso,
     estimatedValue: data.valorEstimadoProximoConcurso,
-    drawnNumbers: data.listaDezenas.map((n) => parseInt(n, 10)),
+    drawnNumbers: data.listaDezenas.map((n: string) => parseInt(n, 10)),
     isAccumulated: data.acumulado,
-    winners: data.listaRateioPremio?.map((r) => ({
+    winners: data.listaRateioPremio?.map((r: { faixa: number; numeroDeGanhadores: number; valorPremio: number; descricaoFaixa: string }) => ({
       tier: r.faixa,
       winners: r.numeroDeGanhadores,
       prize: r.valorPremio,
@@ -28,49 +25,93 @@ function formatContest(data: LotteryContest): FormattedContest {
 }
 
 export async function getLatestContest(): Promise<FormattedContest> {
-  // Check cache
-  const now = Date.now();
-  if (cachedContest && now - cacheTimestamp < CACHE_DURATION) {
-    return cachedContest;
-  }
-
   try {
-    const response = await fetch(CAIXA_API_URL, {
-      next: { revalidate: 300 }, // Revalidate every 5 minutes
-      headers: {
-        Accept: "application/json",
-      },
+    // First, try to get from database (most reliable)
+    const dbContest = await prisma.contest.findFirst({
+      orderBy: { id: "desc" },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch lottery data: ${response.status}`);
+    if (dbContest) {
+      return {
+        contestNumber: dbContest.id,
+        drawDate: dbContest.drawDate.toISOString().split("T")[0],
+        nextDrawDate: getNextDrawDate(),
+        jackpotValue: Number(dbContest.nextJackpot) || Number(dbContest.jackpotValue),
+        estimatedValue: Number(dbContest.nextJackpot) || Number(dbContest.jackpotValue),
+        drawnNumbers: dbContest.drawnNumbers,
+        isAccumulated: dbContest.isAccumulated,
+        winners: [],
+      };
     }
 
-    const data: LotteryContest = await response.json();
-    cachedContest = formatContest(data);
-    cacheTimestamp = now;
+    // Fallback: Try external APIs if database is empty
+    const contest = await fetchFromExternalAPIs();
+    if (contest) {
+      return formatContest(contest);
+    }
 
-    return cachedContest;
+    // Ultimate fallback
+    return getDefaultContest();
   } catch (error) {
     console.error("Error fetching lottery data:", error);
-
-    // Return cached data if available, even if expired
-    if (cachedContest) {
-      return cachedContest;
-    }
-
-    // Return fallback data for development/demo
-    return {
-      contestNumber: 2800,
-      drawDate: new Date().toISOString().split("T")[0],
-      nextDrawDate: getNextDrawDate(),
-      jackpotValue: 50000000,
-      estimatedValue: 50000000,
-      drawnNumbers: [],
-      isAccumulated: true,
-      winners: [],
-    };
+    return getDefaultContest();
   }
+}
+
+async function fetchFromExternalAPIs(): Promise<LotteryContest | null> {
+  // Try Caixa first
+  try {
+    const response = await fetch(CAIXA_API_URL, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {
+    console.log("Caixa API failed");
+  }
+
+  // Try fallback API
+  try {
+    const response = await fetch(FALLBACK_API_URL, {
+      headers: { "Accept": "application/json" },
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        numero: data.concurso,
+        dataApuracao: data.data,
+        dataProximoConcurso: data.dataProximoConcurso,
+        listaDezenas: data.dezenas,
+        valorAcumuladoProximoConcurso: data.valorAcumuladoProximoConcurso || 0,
+        valorEstimadoProximoConcurso: data.valorEstimadoProximoConcurso || 0,
+        acumulado: data.acumulou,
+        listaRateioPremio: [],
+      };
+    }
+  } catch {
+    console.log("Fallback API also failed");
+  }
+
+  return null;
+}
+
+function getDefaultContest(): FormattedContest {
+  return {
+    contestNumber: 2954,
+    drawDate: new Date().toISOString().split("T")[0],
+    nextDrawDate: getNextDrawDate(),
+    jackpotValue: 600000000,
+    estimatedValue: 600000000,
+    drawnNumbers: [],
+    isAccumulated: true,
+    winners: [],
+  };
 }
 
 export async function getContestByNumber(
