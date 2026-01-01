@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { JackpotCard } from "@/components/jackpot-card";
 import { Disclaimer } from "@/components/disclaimer";
 import { Logo } from "@/components/logo";
-import { getLatestContest } from "@/lib/lottery/api";
+import { getLatestContestFromDB } from "@/actions/contests";
 import {
   Dices,
   TrendingUp,
@@ -19,7 +19,7 @@ import {
 export const revalidate = 300; // Revalidate every 5 minutes
 
 async function LandingPage() {
-  const contest = await getLatestContest();
+  const contest = await getLatestContestFromDB();
 
   return (
     <div className="min-h-screen flex flex-col">

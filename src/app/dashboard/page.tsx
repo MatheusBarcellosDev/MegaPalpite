@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JackpotCard } from "@/components/jackpot-card";
 import { GameList } from "@/components/game-card";
-import { getLatestContest } from "@/lib/lottery/api";
+import { getLatestContestFromDB } from "@/actions/contests";
 import { getRecentGames } from "@/actions/games";
 import { Dices, History, TrendingUp, ChevronRight } from "lucide-react";
 
@@ -12,7 +12,7 @@ export const revalidate = 300; // Revalidate every 5 minutes
 
 export default async function DashboardPage() {
   const [contest, recentGames] = await Promise.all([
-    getLatestContest(),
+    getLatestContestFromDB(),
     getRecentGames(3),
   ]);
 
