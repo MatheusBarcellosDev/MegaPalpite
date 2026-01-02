@@ -53,11 +53,11 @@ export async function getLatestContestFromDB(): Promise<FormattedContest> {
 
 function getDefaultContest(): FormattedContest {
   return {
-    contestNumber: 2954,
+    contestNumber: 2956,
     drawDate: new Date().toISOString().split("T")[0],
     nextDrawDate: getNextDrawDate(),
-    jackpotValue: 600000000,
-    estimatedValue: 600000000,
+    jackpotValue: 3500000, // R$ 3.5 milhões como fallback
+    estimatedValue: 3500000,
     drawnNumbers: [],
     isAccumulated: true,
     winners: [],

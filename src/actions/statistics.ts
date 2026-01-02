@@ -53,61 +53,81 @@ export async function getNumberFrequency(contestCount: number = 100): Promise<Fr
  * Get hot and cold numbers
  */
 export async function getHotColdNumbers(): Promise<HotColdData> {
-  // Get last 50 contests for hot numbers
-  const recentContests = await prisma.contest.findMany({
-    orderBy: { id: "desc" },
-    take: 50,
-    select: { drawnNumbers: true },
-  });
-
-  // Count frequency
-  const frequency: Record<number, number> = {};
-  for (let i = 1; i <= 60; i++) {
-    frequency[i] = 0;
-  }
-
-  recentContests.forEach((contest: { drawnNumbers: number[] }) => {
-    contest.drawnNumbers.forEach((num: number) => {
-      frequency[num]++;
+  try {
+    // Get last 50 contests for hot numbers
+    const recentContests = await prisma.contest.findMany({
+      orderBy: { id: "desc" },
+      take: 50,
+      select: { drawnNumbers: true },
     });
-  });
 
-  // Get all contests for "last seen" calculation
-  const allContests = await prisma.contest.findMany({
-    orderBy: { id: "desc" },
-    take: 100,
-    select: { id: true, drawnNumbers: true },
-  });
+    // If no contests, return empty data
+    if (recentContests.length === 0) {
+      return {
+        hotNumbers: [],
+        coldNumbers: [],
+        hotNumbersDetailed: [],
+        coldNumbersDetailed: [],
+      };
+    }
 
-  // Calculate last seen for each number
-  const lastSeen: Record<number, number> = {};
-  for (let i = 1; i <= 60; i++) {
-    lastSeen[i] = 100; // Default: not seen in last 100
-  }
+    // Count frequency
+    const frequency: Record<number, number> = {};
+    for (let i = 1; i <= 60; i++) {
+      frequency[i] = 0;
+    }
 
-  allContests.forEach((contest: { id: number; drawnNumbers: number[] }, index: number) => {
-    contest.drawnNumbers.forEach((num: number) => {
-      if (lastSeen[num] === 100) {
-        lastSeen[num] = index;
-      }
+    recentContests.forEach((contest: { drawnNumbers: number[] }) => {
+      contest.drawnNumbers.forEach((num: number) => {
+        frequency[num]++;
+      });
     });
-  });
 
-  // Sort by frequency (hot) and last seen (cold)
-  const sortedByFrequency = Object.entries(frequency)
-    .map(([number, freq]) => ({ number: parseInt(number), frequency: freq }))
-    .sort((a, b) => b.frequency - a.frequency);
+    // Get all contests for "last seen" calculation
+    const allContests = await prisma.contest.findMany({
+      orderBy: { id: "desc" },
+      take: 100,
+      select: { id: true, drawnNumbers: true },
+    });
 
-  const sortedByLastSeen = Object.entries(lastSeen)
-    .map(([number, seen]) => ({ number: parseInt(number), lastSeen: seen }))
-    .sort((a, b) => b.lastSeen - a.lastSeen);
+    // Calculate last seen for each number
+    const lastSeen: Record<number, number> = {};
+    for (let i = 1; i <= 60; i++) {
+      lastSeen[i] = 100; // Default: not seen in last 100
+    }
 
-  return {
-    hotNumbers: sortedByFrequency.slice(0, 10).map((n: { number: number }) => n.number),
-    coldNumbers: sortedByLastSeen.slice(0, 10).map((n: { number: number }) => n.number),
-    hotNumbersDetailed: sortedByFrequency.slice(0, 10),
-    coldNumbersDetailed: sortedByLastSeen.slice(0, 10),
-  };
+    allContests.forEach((contest: { id: number; drawnNumbers: number[] }, index: number) => {
+      contest.drawnNumbers.forEach((num: number) => {
+        if (lastSeen[num] === 100) {
+          lastSeen[num] = index;
+        }
+      });
+    });
+
+    // Sort by frequency (hot) and last seen (cold)
+    const sortedByFrequency = Object.entries(frequency)
+      .map(([number, freq]) => ({ number: parseInt(number), frequency: freq }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    const sortedByLastSeen = Object.entries(lastSeen)
+      .map(([number, seen]) => ({ number: parseInt(number), lastSeen: seen }))
+      .sort((a, b) => b.lastSeen - a.lastSeen);
+
+    return {
+      hotNumbers: sortedByFrequency.slice(0, 10).map((n: { number: number }) => n.number),
+      coldNumbers: sortedByLastSeen.slice(0, 10).map((n: { number: number }) => n.number),
+      hotNumbersDetailed: sortedByFrequency.slice(0, 10),
+      coldNumbersDetailed: sortedByLastSeen.slice(0, 10),
+    };
+  } catch (error) {
+    console.error("Error getting hot/cold numbers:", error);
+    return {
+      hotNumbers: [],
+      coldNumbers: [],
+      hotNumbersDetailed: [],
+      coldNumbersDetailed: [],
+    };
+  }
 }
 
 /**
