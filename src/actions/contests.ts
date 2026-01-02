@@ -25,9 +25,10 @@ function getNextDrawDate(): string {
   return nextDraw.toISOString().split("T")[0];
 }
 
-export async function getLatestContestFromDB(): Promise<FormattedContest> {
+export async function getLatestContestFromDB(lotteryType: string = "megasena"): Promise<FormattedContest> {
   try {
     const dbContest = await prisma.contest.findFirst({
+      where: { lotteryType },
       orderBy: { id: "desc" },
     });
 
