@@ -215,6 +215,7 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
     await prisma.contest.create({
       data: {
         id: contest.numero,
+        lotteryType,
         drawDate: parseDate(contest.dataApuracao),
         drawnNumbers,
         jackpotValue: contest.valorAcumuladoProximoConcurso || contest.valorEstimadoProximoConcurso,
