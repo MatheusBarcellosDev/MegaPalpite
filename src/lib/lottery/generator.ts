@@ -114,15 +114,56 @@ export async function getDelayedNumbers(threshold: number = 20): Promise<number[
 }
 
 /**
- * Obtém o próximo número de concurso
+ * Obtém o próximo número de concurso para jogar
+ * Se o último concurso já foi sorteado, retorna o próximo
+ * Se o último concurso ainda não foi sorteado, retorna ele mesmo
  */
 export async function getNextContestNumber(): Promise<number> {
   const latest = await prisma.contest.findFirst({
     orderBy: { id: "desc" },
-    select: { id: true },
+    select: { id: true, drawnNumbers: true, drawDate: true },
   });
 
-  return (latest?.id || 0) + 1;
+  if (!latest) {
+    // No contests in DB, start with 2955 (current approximate)
+    return 2955;
+  }
+
+  // Check if the latest contest has already been drawn
+  // A contest is considered drawn if it has 6 numbers
+  const isDrawn = latest.drawnNumbers && latest.drawnNumbers.length === 6;
+  
+  if (isDrawn) {
+    // Latest contest was drawn, next games are for the following contest
+    return latest.id + 1;
+  }
+  
+  // Latest contest hasn't been drawn yet, games are for this contest
+  return latest.id;
+}
+
+/**
+ * Verifica se o concurso ainda está aberto para apostas
+ * Retorna info sobre o concurso ativo
+ */
+export async function getActiveContestInfo(): Promise<{
+  contestNumber: number;
+  isOpen: boolean;
+  message?: string;
+}> {
+  const contestNumber = await getNextContestNumber();
+  
+  // Check if we have this contest in DB (with draw date info)
+  const contest = await prisma.contest.findUnique({
+    where: { id: contestNumber - 1 }, // Get the previous (drawn) contest
+    select: { drawDate: true },
+  });
+  
+  // For now, always allow - we can add time-based validation later
+  return {
+    contestNumber,
+    isOpen: true,
+  };
 }
 
 /**
