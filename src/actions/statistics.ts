@@ -52,10 +52,15 @@ export async function getNumberFrequency(contestCount: number = 100): Promise<Fr
 /**
  * Get hot and cold numbers
  */
-export async function getHotColdNumbers(): Promise<HotColdData> {
+export async function getHotColdNumbers(lotteryType: string = "megasena"): Promise<HotColdData> {
   try {
+    // Determine number range based on lottery type
+    const maxNumber = lotteryType === "lotofacil" ? 25 : lotteryType === "quina" ? 80 : 60;
+    const minNumber = lotteryType === "lotofacil" ? 1 : lotteryType === "quina" ? 1 : 1;
+    
     // Get last 50 contests for hot numbers
     const recentContests = await prisma.contest.findMany({
+      where: { lotteryType },
       orderBy: { id: "desc" },
       take: 50,
       select: { drawnNumbers: true },
@@ -73,18 +78,21 @@ export async function getHotColdNumbers(): Promise<HotColdData> {
 
     // Count frequency
     const frequency: Record<number, number> = {};
-    for (let i = 1; i <= 60; i++) {
+    for (let i = minNumber; i <= maxNumber; i++) {
       frequency[i] = 0;
     }
 
     recentContests.forEach((contest: { drawnNumbers: number[] }) => {
       contest.drawnNumbers.forEach((num: number) => {
-        frequency[num]++;
+        if (num >= minNumber && num <= maxNumber) {
+          frequency[num]++;
+        }
       });
     });
 
     // Get all contests for "last seen" calculation
     const allContests = await prisma.contest.findMany({
+      where: { lotteryType },
       orderBy: { id: "desc" },
       take: 100,
       select: { id: true, drawnNumbers: true },
@@ -92,13 +100,13 @@ export async function getHotColdNumbers(): Promise<HotColdData> {
 
     // Calculate last seen for each number
     const lastSeen: Record<number, number> = {};
-    for (let i = 1; i <= 60; i++) {
+    for (let i = minNumber; i <= maxNumber; i++) {
       lastSeen[i] = 100; // Default: not seen in last 100
     }
 
     allContests.forEach((contest: { id: number; drawnNumbers: number[] }, index: number) => {
       contest.drawnNumbers.forEach((num: number) => {
-        if (lastSeen[num] === 100) {
+        if (num >= minNumber && num <= maxNumber && lastSeen[num] === 100) {
           lastSeen[num] = index;
         }
       });

@@ -20,8 +20,8 @@ export async function getStrategies() {
   return getAvailableStrategies();
 }
 
-export async function getLatestContest() {
-  const contest = await getLatestContestFromDB();
+export async function getLatestContest(lotteryType: string = "megasena") {
+  const contest = await getLatestContestFromDB(lotteryType);
   return contest;
 }
 
@@ -55,10 +55,10 @@ export async function generateGame(
     const contestNumber = await getNextContestNumber();
 
     // Generate numbers using selected strategy
-    const { numbers, stats } = await generateNumbersWithStrategy(strategy);
+    const { numbers, stats } = await generateNumbersWithStrategy(strategy, lotteryType);
 
     // Calculate frequencies for explanation context
-    const frequencies = await calculateFrequencyFromDB(100);
+    const frequencies = await calculateFrequencyFromDB(100, lotteryType as any);
     const context = generateExplanationContext(numbers, frequencies, strategy);
 
     // Generate AI explanation

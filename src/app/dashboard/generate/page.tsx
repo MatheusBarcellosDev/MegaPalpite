@@ -58,15 +58,23 @@ export default function GeneratePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadInitialData();
+    loadInitialData(selectedLottery);
   }, []);
 
-  const loadInitialData = async () => {
+  // Reload data when lottery changes
+  useEffect(() => {
+    if (!initialLoading) {
+      loadInitialData(selectedLottery);
+    }
+  }, [selectedLottery]);
+
+  const loadInitialData = async (lotteryType: string = "megasena") => {
+    setInitialLoading(true);
     try {
       const [strats, contest, hotCold] = await Promise.all([
         getStrategies(),
-        getLatestContest(),
-        getHotColdNumbers(),
+        getLatestContest(lotteryType),
+        getHotColdNumbers(lotteryType),
       ]);
       setStrategies(strats);
       if (contest) {

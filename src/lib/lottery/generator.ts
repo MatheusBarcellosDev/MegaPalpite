@@ -105,8 +105,15 @@ export async function calculateFrequencyFromDB(
 /**
  * Identifica números "atrasados" - que não saem há muitos sorteios
  */
-export async function getDelayedNumbers(threshold: number = 20): Promise<number[]> {
+export async function getDelayedNumbers(
+  threshold: number = 20,
+  lotteryType: string = "megasena"
+): Promise<number[]> {
+  const { getLotteryConfig } = await import("./types-config");
+  const lotteryConfig = getLotteryConfig(lotteryType as any);
+  
   const contests = await prisma.contest.findMany({
+    where: { lotteryType },
     orderBy: { id: "desc" },
     take: threshold,
     select: { drawnNumbers: true },
@@ -119,7 +126,7 @@ export async function getDelayedNumbers(threshold: number = 20): Promise<number[
 
   // Números que NÃO apareceram nos últimos 'threshold' sorteios
   const delayed: number[] = [];
-  for (let i = 1; i <= 60; i++) {
+  for (let i = lotteryConfig.minNumber; i <= lotteryConfig.maxNumber; i++) {
     if (!recentNumbers.has(i)) {
       delayed.push(i);
     }
@@ -205,11 +212,20 @@ export async function getLatestContestFromDB() {
  * Gera números usando a estratégia especificada
  */
 export async function generateNumbersWithStrategy(
-  strategy: GenerationStrategy = "balanced"
+  strategy: GenerationStrategy = "balanced",
+  lotteryType: string = "megasena"
 ): Promise<{ numbers: number[]; stats: GenerationStats }> {
-  const config = getStrategyConfig(strategy, 6); // 6 numbers for megasena default
-  const frequency = await calculateFrequencyFromDB(100);
-  const delayed = await getDelayedNumbers(30);
+  // Import lottery config
+  const { getLotteryConfig } = await import("./types-config");
+  const lotteryConfig = getLotteryConfig(lotteryType as any);
+  
+  const numbersCount = lotteryConfig.numbersCount;
+  const minNumber = lotteryConfig.minNumber;
+  const maxNumber = lotteryConfig.maxNumber;
+  
+  const config = getStrategyConfig(strategy, numbersCount);
+  const frequency = await calculateFrequencyFromDB(100, lotteryType as any);
+  const delayed = await getDelayedNumbers(30, lotteryType);
 
   // Separa números por categoria
   const hotNumbers = frequency.slice(0, 15).map((f: NumberFrequency) => f.number); // Top 15 mais frequentes
@@ -236,8 +252,8 @@ export async function generateNumbersWithStrategy(
   fromBalanced.forEach((n: number) => selected.add(n));
 
   // Se ainda faltam números, completa do pool geral
-  while (selected.size < 6) {
-    const allAvailable = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1).filter(
+  while (selected.size < numbersCount) {
+    const allAvailable = Array.from({ length: maxNumber - minNumber + 1 }, (_: unknown, i: number) => i + minNumber).filter(
       (n: number) => !selected.has(n)
     );
     const random = allAvailable[Math.floor(Math.random() * allAvailable.length)];
