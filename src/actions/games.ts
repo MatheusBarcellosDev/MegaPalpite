@@ -25,13 +25,17 @@ export async function getLatestContest() {
   return contest;
 }
 
-export async function generateGame(strategy: GenerationStrategy = "balanced"): Promise<{
+export async function generateGame(
+  strategy: GenerationStrategy = "balanced",
+  lotteryType: string = "megasena"
+): Promise<{
   success: boolean;
   game?: {
     numbers: number[];
     explanation: string;
     contestNumber: number;
     strategy: string;
+    lotteryType: string;
   };
   error?: string;
 }> {
@@ -72,6 +76,7 @@ export async function generateGame(strategy: GenerationStrategy = "balanced"): P
     await prisma.game.create({
       data: {
         userId: user.id,
+        lotteryType,
         numbers,
         explanation,
         contestNumber,
@@ -88,6 +93,7 @@ export async function generateGame(strategy: GenerationStrategy = "balanced"): P
         explanation,
         contestNumber,
         strategy,
+        lotteryType,
       },
     };
   } catch (error) {

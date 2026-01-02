@@ -88,7 +88,10 @@ export default function GeneratePage() {
     setError(null);
 
     try {
-      const result = await generateGame(selectedStrategy as "balanced" | "hot" | "cold" | "mixed");
+      const result = await generateGame(
+        selectedStrategy as "balanced" | "hot" | "cold" | "mixed",
+        selectedLottery
+      );
 
       if (result.success && result.game) {
         setGame(result.game);
