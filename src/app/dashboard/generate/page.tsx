@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NumberBalls } from "@/components/number-balls";
 import { HotColdNumbers } from "@/components/hot-cold-numbers";
 import { Disclaimer } from "@/components/disclaimer";
+import { LotterySelector, LOTTERY_OPTIONS } from "@/components/lottery-selector";
 import { generateGame, getStrategies, getLatestContest } from "@/actions/games";
 import { getHotColdNumbers } from "@/actions/statistics";
 import { 
@@ -43,6 +44,7 @@ const strategyIcons: Record<string, React.ReactNode> = {
 export default function GeneratePage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [selectedLottery, setSelectedLottery] = useState("megasena");
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("balanced");
   const [contestNumber, setContestNumber] = useState<number | null>(null);
@@ -104,8 +106,20 @@ export default function GeneratePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
       {/* Header */}
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Gerar Números</h1>
+        
+        {/* Lottery Selector */}
+        <div className="flex justify-center">
+          <LotterySelector 
+            selectedLottery={selectedLottery}
+            onSelect={(lottery) => {
+              setSelectedLottery(lottery);
+              setGame(null); // Reset game when changing lottery
+            }}
+          />
+        </div>
+        
         <p className="text-muted-foreground">
           {contestNumber 
             ? `Gerando para o Concurso ${contestNumber}`
