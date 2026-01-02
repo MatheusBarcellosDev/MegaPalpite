@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NumberFrequency, GenerationStats } from "./types";
+import { LotteryType, getLotteryConfig } from "./types-config";
 
 // Estratégias disponíveis
 export type GenerationStrategy = "balanced" | "hot" | "cold" | "mixed";
@@ -12,42 +13,52 @@ interface StrategyConfig {
   balancedNumbers: number; // Quantos números equilibrados
 }
 
-const STRATEGIES: Record<GenerationStrategy, StrategyConfig> = {
-  balanced: {
-    name: "Equilibrado",
-    description: "Mix de números quentes, frios e equilibrados",
-    hotNumbers: 2,
-    coldNumbers: 2,
-    balancedNumbers: 2,
-  },
-  hot: {
-    name: "Quente",
-    description: "Foco em números que mais saíram recentemente",
-    hotNumbers: 4,
-    coldNumbers: 1,
-    balancedNumbers: 1,
-  },
-  cold: {
-    name: "Frio",
-    description: "Foco em números 'atrasados' que não saem há tempo",
-    hotNumbers: 1,
-    coldNumbers: 4,
-    balancedNumbers: 1,
-  },
-  mixed: {
-    name: "Aleatório Inteligente",
-    description: "Seleção aleatória respeitando padrões estatísticos",
-    hotNumbers: 2,
-    coldNumbers: 2,
-    balancedNumbers: 2,
-  },
+// Strategy configs will be scaled based on lottery's numbersCount
+const STRATEGY_RATIOS: Record<GenerationStrategy, { hot: number; cold: number; balanced: number }> = {
+  balanced: { hot: 0.33, cold: 0.33, balanced: 0.34 },
+  hot: { hot: 0.66, cold: 0.17, balanced: 0.17 },
+  cold: { hot: 0.17, cold: 0.66, balanced: 0.17 },
+  mixed: { hot: 0.33, cold: 0.33, balanced: 0.34 },
 };
 
+function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): StrategyConfig {
+  const ratios = STRATEGY_RATIOS[strategy];
+  const hot = Math.max(1, Math.round(numbersCount * ratios.hot));
+  const cold = Math.max(1, Math.round(numbersCount * ratios.cold));
+  const balanced = numbersCount - hot - cold;
+  
+  const names: Record<GenerationStrategy, { name: string; description: string }> = {
+    balanced: {
+      name: "Equilibrado",
+      description: "Mix de números quentes, frios e equilibrados",
+    },
+    hot: {
+      name: "Quente",
+      description: "Foco em números que mais saíram recentemente",
+    },
+    cold: {
+      name: "Frio",
+      description: "Foco em números 'atrasados' que não saem há tempo",
+    },
+    mixed: {
+      name: "Aleatório Inteligente",
+      description: "Seleção aleatória respeitando padrões estatísticos",
+    },
+  };
+  
+  return {
+    ...names[strategy],
+    hotNumbers: hot,
+    coldNumbers: cold,
+    balancedNumbers: balanced,
+  };
+}
+
 export function getAvailableStrategies() {
-  return Object.entries(STRATEGIES).map(([key, config]: [string, StrategyConfig]) => ({
-    id: key as GenerationStrategy,
-    name: config.name,
-    description: config.description,
+  return (["balanced", "hot", "cold", "mixed"] as GenerationStrategy[]).map(key => ({
+    id: key,
+    name: getStrategyConfig(key, 6).name,
+    description: getStrategyConfig(key, 6).description,
   }));
 }
 
@@ -55,8 +66,12 @@ export function getAvailableStrategies() {
  * Calcula a frequência de cada número nos últimos N concursos
  */
 export async function calculateFrequencyFromDB(
-  contestCount: number = 100
+  contestCount: number = 100,
+  lotteryType: LotteryType = "megasena"
 ): Promise<NumberFrequency[]> {
+  const config = getLotteryConfig(lotteryType);
+  
+  // Note: lotteryType filter will be added after DB migration
   const contests = await prisma.contest.findMany({
     orderBy: { id: "desc" },
     take: contestCount,
@@ -65,8 +80,8 @@ export async function calculateFrequencyFromDB(
 
   const frequency: Record<number, number> = {};
   
-  // Inicializa todos os números de 1 a 60
-  for (let i = 1; i <= 60; i++) {
+  // Inicializa todos os números no range da loteria
+  for (let i = config.minNumber; i <= config.maxNumber; i++) {
     frequency[i] = 0;
   }
 
@@ -82,7 +97,7 @@ export async function calculateFrequencyFromDB(
     .map(([number, count]: [string, number]) => ({
       number: parseInt(number),
       frequency: count,
-      percentage: (count / contests.length) * 100,
+      percentage: contests.length > 0 ? (count / contests.length) * 100 : 0,
     }))
     .sort((a: { frequency: number }, b: { frequency: number }) => b.frequency - a.frequency);
 }
@@ -192,7 +207,7 @@ export async function getLatestContestFromDB() {
 export async function generateNumbersWithStrategy(
   strategy: GenerationStrategy = "balanced"
 ): Promise<{ numbers: number[]; stats: GenerationStats }> {
-  const config = STRATEGIES[strategy];
+  const config = getStrategyConfig(strategy, 6); // 6 numbers for megasena default
   const frequency = await calculateFrequencyFromDB(100);
   const delayed = await getDelayedNumbers(30);
 
@@ -412,7 +427,7 @@ export function generateExplanationContext(
   frequency: NumberFrequency[],
   strategy: GenerationStrategy
 ): string {
-  const strategyConfig = STRATEGIES[strategy];
+  const strategyConfig = getStrategyConfig(strategy, 6);
   const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
 
   const numbersInfo = numbers.map((n: number) => {

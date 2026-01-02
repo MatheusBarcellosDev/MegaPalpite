@@ -10,6 +10,7 @@ datasource db {
 model Game {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
+  lotteryType   String   @default("megasena") @map("lottery_type")
   numbers       Int[]
   explanation   String?
   contestNumber Int      @map("contest_number")
@@ -21,6 +22,7 @@ model Game {
 
 model Contest {
   id             Int      @id                           // Número do concurso
+  lotteryType    String   @default("megasena") @map("lottery_type")
   drawDate       DateTime @map("draw_date")
   drawnNumbers   Int[]    @map("drawn_numbers")
   jackpotValue   Decimal  @map("jackpot_value")
@@ -29,6 +31,7 @@ model Contest {
   winnersData    Json?    @map("winners_data")          // JSON com ganhadores
   fetchedAt      DateTime @default(now()) @map("fetched_at")
 
+  @@unique([id, lotteryType])
   @@map("contests")
 }
 
@@ -41,3 +44,4 @@ model Result {
 
   @@map("results")
 }
+

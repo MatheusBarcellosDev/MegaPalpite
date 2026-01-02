@@ -8,56 +8,38 @@ interface SendResultEmailParams {
   to: string;
   contestNumber: number;
   drawnNumbers: number[];
-  userGames: {
-    numbers: number[];
-    hits: number;
-  }[];
+  numbers: number[];
+  hits: number;
+  lotteryType?: string;
 }
 
 export async function sendResultEmail({
   to,
   contestNumber,
   drawnNumbers,
-  userGames,
-}: SendResultEmailParams): Promise<{ success: boolean; error?: string }> {
+  numbers,
+  hits,
+  lotteryType = "Mega-Sena",
+}: SendResultEmailParams): Promise<boolean> {
   if (!resend) {
     console.log("Resend not configured, skipping email");
-    return { success: false, error: "Email not configured" };
+    return false;
   }
 
-  const bestResult = Math.max(...userGames.map((g) => g.hits));
   const prize =
-    bestResult === 6
+    hits === 6
       ? "🎉 SENA! Parabéns!"
-      : bestResult === 5
+      : hits === 5
       ? "Quina!"
-      : bestResult === 4
+      : hits === 4
       ? "Quadra!"
-      : "Nenhum prêmio desta vez";
-
-  const gamesHtml = userGames
-    .map(
-      (game, index) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #333;">Jogo ${index + 1}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #333; font-family: monospace;">
-          ${game.numbers.map((n) => n.toString().padStart(2, "0")).join(" - ")}
-        </td>
-        <td style="padding: 8px; border-bottom: 1px solid #333; text-align: center; font-weight: bold; color: ${
-          game.hits >= 4 ? "#22c55e" : "#888"
-        };">
-          ${game.hits} acertos
-        </td>
-      </tr>
-    `
-    )
-    .join("");
+      : "Você acertou números!";
 
   try {
     await resend.emails.send({
-      from: "Mega-Sena Smart <noreply@megasena.app>",
+      from: "MegaPalpite <noreply@megapalpite.com>",
       to,
-      subject: `🎰 Resultado Concurso ${contestNumber} - ${bestResult} acertos!`,
+      subject: `🎰 Resultado ${lotteryType} - Concurso ${contestNumber} - ${hits} acertos!`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -66,10 +48,10 @@ export async function sendResultEmail({
         </head>
         <body style="background-color: #0a0a0a; color: #fff; font-family: Arial, sans-serif; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #22c55e; text-align: center;">🎰 Mega-Sena Smart</h1>
+            <h1 style="color: #22c55e; text-align: center;">🎰 MegaPalpite</h1>
             
             <div style="background-color: #1a1a1a; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Concurso ${contestNumber}</h2>
+              <h2 style="margin-top: 0;">${lotteryType} - Concurso ${contestNumber}</h2>
               
               <p style="color: #888;">Números sorteados:</p>
               <p style="font-size: 24px; font-family: monospace; text-align: center; color: #22c55e;">
@@ -78,29 +60,23 @@ export async function sendResultEmail({
             </div>
             
             <div style="background-color: #1a1a1a; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h3 style="margin-top: 0;">Seus jogos:</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                  <tr style="color: #888;">
-                    <th style="text-align: left; padding: 8px;">Jogo</th>
-                    <th style="text-align: left; padding: 8px;">Números</th>
-                    <th style="text-align: center; padding: 8px;">Acertos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${gamesHtml}
-                </tbody>
-              </table>
+              <h3 style="margin-top: 0;">Seu jogo:</h3>
+              <p style="font-size: 20px; font-family: monospace; text-align: center;">
+                ${numbers.map((n) => n.toString().padStart(2, "0")).join(" - ")}
+              </p>
+              <p style="text-align: center; font-size: 24px; font-weight: bold; color: ${hits >= 4 ? "#22c55e" : "#888"};">
+                ${hits} acertos
+              </p>
             </div>
             
             <div style="text-align: center; padding: 20px; background-color: ${
-              bestResult >= 4 ? "#22c55e20" : "#1a1a1a"
+              hits >= 4 ? "#22c55e20" : "#1a1a1a"
             }; border-radius: 8px;">
               <p style="font-size: 24px; margin: 0;">${prize}</p>
             </div>
             
             <p style="text-align: center; color: #666; margin-top: 30px; font-size: 12px;">
-              Este email foi enviado automaticamente pelo Mega-Sena Smart.<br/>
+              Este email foi enviado automaticamente pelo MegaPalpite.<br/>
               Jogue com responsabilidade.
             </p>
           </div>
@@ -109,9 +85,9 @@ export async function sendResultEmail({
       `,
     });
 
-    return { success: true };
+    return true;
   } catch (error) {
     console.error("Error sending email:", error);
-    return { success: false, error: "Failed to send email" };
+    return false;
   }
 }

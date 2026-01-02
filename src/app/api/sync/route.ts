@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { sendResultEmail } from "@/lib/email";
 import { countMatches } from "@/lib/lottery/generator";
 import { createClient } from "@supabase/supabase-js";
+import { LotteryType, ACTIVE_LOTTERIES, getLotteryConfig } from "@/lib/lottery/types-config";
 
-const CAIXA_API_URL = "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena";
-const FALLBACK_API_URL = "https://loteriascaixa-api.herokuapp.com/api/megasena/latest";
+const CAIXA_API_BASE = "https://servicebus2.caixa.gov.br/portaldeloterias/api";
+const FALLBACK_API_BASE = "https://loteriascaixa-api.herokuapp.com/api";
 
 interface LotteryContest {
   numero: number;
@@ -23,10 +24,12 @@ interface LotteryContest {
 }
 
 // Helper function to try fetching from multiple APIs
-async function fetchContestData(): Promise<LotteryContest | null> {
+async function fetchContestData(lotteryType: LotteryType): Promise<LotteryContest | null> {
+  const config = getLotteryConfig(lotteryType);
+  
   // Try Caixa API first
   try {
-    const response = await fetch(CAIXA_API_URL, {
+    const response = await fetch(`${CAIXA_API_BASE}/${config.apiPath}`, {
       headers: {
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -40,12 +43,12 @@ async function fetchContestData(): Promise<LotteryContest | null> {
       return data as LotteryContest;
     }
   } catch (e) {
-    console.log("Caixa API failed, trying fallback...", e);
+    console.log(`Caixa API failed for ${lotteryType}, trying fallback...`, e);
   }
 
   // Fallback to alternative API
   try {
-    const response = await fetch(FALLBACK_API_URL, {
+    const response = await fetch(`${FALLBACK_API_BASE}/${config.apiPath}/latest`, {
       headers: { "Accept": "application/json" },
       cache: "no-store",
     });
@@ -68,7 +71,7 @@ async function fetchContestData(): Promise<LotteryContest | null> {
       };
     }
   } catch (e) {
-    console.log("Fallback API also failed", e);
+    console.log(`Fallback API also failed for ${lotteryType}`, e);
   }
 
   return null;
@@ -82,111 +85,133 @@ function parseDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
-async function checkAndNotifyUsers(contestNumber: number, drawnNumbers: number[]) {
-  // Get all games for this contest
-  const games = await prisma.game.findMany({
-    where: { contestNumber },
-    include: { result: true },
-  });
+// Check games and notify users for a specific lottery
+async function checkAndNotifyUsers(
+  contestNumber: number,
+  drawnNumbers: number[],
+  lotteryType: LotteryType
+): Promise<{ notified: number; errors: number }> {
+  let notified = 0;
+  let errors = 0;
+  
+  const config = getLotteryConfig(lotteryType);
 
-  // Group games by userId
-  const gamesByUser = new Map<string, typeof games>();
-  games.forEach((game: typeof games[number]) => {
-    const userGames = gamesByUser.get(game.userId) || [];
-    userGames.push(game);
-    gamesByUser.set(game.userId, userGames);
-  });
+  try {
+    // Find all games for this contest that don't have results yet
+    // Note: Using raw query until lotteryType field is added to DB
+    const games = await prisma.game.findMany({
+      where: {
+        contestNumber,
+        result: null,
+      },
+    });
 
-  // Process each user
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.log("Supabase admin credentials not configured, skipping email notifications");
+      
+      // Still save results
+      for (const game of games) {
+        const hits = countMatches(game.numbers, drawnNumbers);
+        await prisma.result.create({
+          data: {
+            gameId: game.id,
+            hits,
+          },
+        });
+      }
+      
+      return { notified: 0, errors: 0 };
+    }
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.log("Supabase service key not configured, skipping notifications");
-    return { processed: 0 };
-  }
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  let processed = 0;
-  let emailsSent = 0;
-
-  for (const [userId, userGames] of gamesByUser.entries()) {
-    // Get user email
-    const { data: userData } = await supabase.auth.admin.getUserById(userId);
-    const email = userData?.user?.email;
-
-    if (!email) continue;
-
-    // Calculate hits for each game and save results
-    const gamesWithHits = await Promise.all(
-      userGames.map(async (game: typeof userGames[number]) => {
+    for (const game of games) {
+      try {
         const hits = countMatches(game.numbers, drawnNumbers);
 
-        // Save result if not already saved
-        if (!game.result) {
-          await prisma.result.create({
-            data: {
-              gameId: game.id,
+        // Save result  
+        await prisma.result.create({
+          data: {
+            gameId: game.id,
+            hits,
+          },
+        });
+
+        // Only send email if user hit at least the minimum to win
+        if (hits >= config.minHitsToWin) {
+          const { data: userData } = await supabaseAdmin.auth.admin.getUserById(game.userId);
+          
+          if (userData?.user?.email) {
+            const sent = await sendResultEmail({
+              to: userData.user.email,
+              contestNumber,
+              numbers: game.numbers,
+              drawnNumbers,
               hits,
-            },
-          });
+              lotteryType: config.name,
+            });
+            if (sent) notified++;
+          }
         }
-
-        return {
-          numbers: game.numbers,
-          hits: game.result?.hits ?? hits,
-        };
-      })
-    );
-
-    // Send email notification
-    const emailResult = await sendResultEmail({
-      to: email,
-      contestNumber,
-      drawnNumbers,
-      userGames: gamesWithHits,
-    });
-
-    if (emailResult.success) {
-      emailsSent++;
+      } catch (e) {
+        console.error(`Error processing game ${game.id}:`, e);
+        errors++;
+      }
     }
-
-    processed++;
+  } catch (e) {
+    console.error("Error checking user games:", e);
+    errors++;
   }
 
-  return { processed, emailsSent };
+  return { notified, errors };
 }
 
-export async function GET() {
-  try {
-    // Fetch latest contest (tries Caixa first, then fallback)
-    const contest = await fetchContestData();
+// Sync a single lottery type
+async function syncLottery(lotteryType: LotteryType): Promise<{
+  success: boolean;
+  message: string;
+  contestNumber?: number;
+  isNew?: boolean;
+}> {
+  const contest = await fetchContestData(lotteryType);
+  
+  if (!contest) {
+    return { success: false, message: `Failed to fetch ${lotteryType} data` };
+  }
 
-    if (!contest) {
-      return NextResponse.json(
-        { success: false, error: "Failed to fetch from all lottery APIs" },
-        { status: 500 }
-      );
-    }
+  // Parse drawn numbers
+  const drawnNumbers = contest.listaDezenas.map((n: string) => parseInt(n, 10));
+  
+  // Check if already exists (for now, just check by ID until lotteryType column is added)
+  const existing = await prisma.contest.findUnique({
+    where: { id: contest.numero },
+  });
 
-    const drawnNumbers = contest.listaDezenas.map((n: string) => parseInt(n, 10));
+  if (existing && existing.drawnNumbers.length === drawnNumbers.length) {
+    return {
+      success: true,
+      message: `${lotteryType} already up to date`,
+      contestNumber: contest.numero,
+      isNew: false,
+    };
+  }
 
-    // Check if we already have this contest
-    const existing = await prisma.contest.findUnique({
+  // Save new contest or update existing
+  if (existing) {
+    await prisma.contest.update({
       where: { id: contest.numero },
+      data: {
+        drawnNumbers,
+        jackpotValue: contest.valorAcumuladoProximoConcurso || contest.valorEstimadoProximoConcurso,
+        isAccumulated: contest.acumulado,
+        nextJackpot: contest.valorEstimadoProximoConcurso,
+        winnersData: contest.listaRateioPremio || [],
+      },
     });
-
-    if (existing) {
-      return NextResponse.json({
-        success: true,
-        message: "Already up to date",
-        contestNumber: contest.numero,
-        isNew: false,
-      });
-    }
-
-    // Save new contest
+  } else {
     await prisma.contest.create({
       data: {
         id: contest.numero,
@@ -198,18 +223,44 @@ export async function GET() {
         winnersData: contest.listaRateioPremio || [],
       },
     });
+  }
 
-    // Check games for this contest and notify users
-    const notifications = await checkAndNotifyUsers(contest.numero, drawnNumbers);
+  // Check games and notify users
+  await checkAndNotifyUsers(contest.numero, drawnNumbers, lotteryType);
+
+  return {
+    success: true,
+    message: `${lotteryType} synced - contest ${contest.numero}`,
+    contestNumber: contest.numero,
+    isNew: !existing,
+  };
+}
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const specificLottery = searchParams.get("lottery") as LotteryType | null;
+
+  try {
+    // Sync specific lottery or all active lotteries
+    const lotteriesToSync = specificLottery 
+      ? [specificLottery] 
+      : ACTIVE_LOTTERIES;
+
+    const results: Record<string, { success: boolean; message: string; contestNumber?: number }> = {};
+
+    for (const lotteryType of lotteriesToSync) {
+      results[lotteryType] = await syncLottery(lotteryType);
+    }
+
+    const allSuccess = Object.values(results).every(r => r.success);
 
     return NextResponse.json({
-      success: true,
-      message: "New contest saved and users notified",
-      contestNumber: contest.numero,
-      isNew: true,
-      drawnNumbers: contest.listaDezenas,
-      isAccumulated: contest.acumulado,
-      notifications,
+      success: allSuccess,
+      message: allSuccess ? "All lotteries synced" : "Some lotteries failed",
+      results,
     });
   } catch (error) {
     console.error("Sync error:", error);
