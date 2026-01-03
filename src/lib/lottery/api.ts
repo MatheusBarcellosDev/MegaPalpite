@@ -15,14 +15,17 @@ export function formatDate(dateString: string): string {
   if (!dateString) return "Data não disponível";
   
   try {
-    // Handle dates from database (ISO format) or Caixa API (dd/mm/yyyy)
     let date: Date;
+    
     if (dateString.includes("/")) {
+      // Handle dd/mm/yyyy format from Caixa API
       const [day, month, year] = dateString.split("/");
-      // Use UTC to avoid timezone issues
       date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
     } else {
-      date = new Date(dateString);
+      // Handle ISO format from database (yyyy-mm-dd or full ISO)
+      // Force UTC interpretation by appending time if needed
+      const isoString = dateString.includes("T") ? dateString : `${dateString}T12:00:00Z`;
+      date = new Date(isoString);
     }
     
     if (isNaN(date.getTime())) {
