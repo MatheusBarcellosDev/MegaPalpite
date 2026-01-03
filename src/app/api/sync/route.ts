@@ -64,12 +64,15 @@ async function fetchContestData(lotteryType: LotteryType): Promise<LotteryContes
 }
 
 function parseDate(dateStr: string): Date {
+  console.log("📅 parseDate called with:", dateStr);
   const parts = dateStr.split("/");
   const day = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10);
   const year = parseInt(parts[2], 10);
   // Use UTC to avoid timezone issues
-  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const result = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  console.log("📅 parseDate result:", result.toISOString());
+  return result;
 }
 
 // Check games and notify users for a specific lottery
@@ -179,8 +182,12 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
 
   const isNew = !existing;
 
+  // Debug: Log what we got from API
+  console.log(`🔍 ${lotteryType} sync - dataProximoConcurso:`, contest.dataProximoConcurso);
+
   // Always update to ensure we have latest data (including nextDrawDate)
   if (existing) {
+    console.log(`♻️  Updating existing contest ${contest.numero} for ${lotteryType}`);
     await prisma.contest.update({
       where: { id: contest.numero },
       data: {
