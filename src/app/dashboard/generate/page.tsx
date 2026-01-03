@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,10 +42,13 @@ const strategyIcons: Record<string, React.ReactNode> = {
   mixed: <Shuffle className="h-5 w-5" />,
 };
 
-export default function GeneratePage() {
+function GeneratePageContent() {
+  const searchParams = useSearchParams();
+  const lotteryParam = searchParams.get("lottery") || "megasena";
+  
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [selectedLottery, setSelectedLottery] = useState("megasena");
+  const [selectedLottery, setSelectedLottery] = useState(lotteryParam);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("balanced");
   const [contestNumber, setContestNumber] = useState<number | null>(null);
@@ -303,5 +307,13 @@ export default function GeneratePage() {
       {/* Disclaimer */}
       <Disclaimer variant="inline" />
     </div>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-8"><Skeleton className="h-96 w-full" /></div>}>
+      <GeneratePageContent />
+    </Suspense>
   );
 }

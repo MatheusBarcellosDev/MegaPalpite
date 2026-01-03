@@ -1,48 +1,114 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { JackpotCard } from "@/components/jackpot-card";
 import { GameList } from "@/components/game-card";
 import { getLatestContestFromDB } from "@/actions/contests";
 import { getRecentGames } from "@/actions/games";
-import { Dices, History, TrendingUp, ChevronRight } from "lucide-react";
+import { Dices, History, TrendingUp, ChevronRight, Trophy } from "lucide-react";
+import { ACTIVE_LOTTERIES, getLotteryConfig } from "@/lib/lottery/types-config";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300; // Revalidate every 5 minutes
 
 export default async function DashboardPage() {
-  const [contest, recentGames] = await Promise.all([
-    getLatestContestFromDB(),
+  // Fetch all active lotteries in parallel
+  const lotteryDataPromises = ACTIVE_LOTTERIES.map(async (lotteryType) => {
+    const contest = await getLatestContestFromDB(lotteryType);
+    const config = getLotteryConfig(lotteryType);
+    return { lotteryType, contest, config };
+  });
+
+  const [lotteries, recentGames] = await Promise.all([
+    Promise.all(lotteryDataPromises),
     getRecentGames(3),
   ]);
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Jackpot Section - Most Prominent */}
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Escolha sua loteria e gere seus números com inteligência artificial
+        </p>
+      </div>
+
+      {/* Lottery Cards Grid */}
       <section>
-        <JackpotCard contest={contest} />
+        <h2 className="text-xl font-semibold mb-4">Loterias Disponíveis</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {lotteries.map(({ lotteryType, contest, config }) => (
+            <Card
+              key={lotteryType}
+              className="relative overflow-hidden hover:shadow-lg transition-shadow"
+              style={{
+                borderTop: `4px solid ${config.primaryColor}`,
+              }}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-2xl">{config.icon}</span>
+                    <span>{config.name}</span>
+                  </CardTitle>
+                  {contest.isAccumulated && (
+                    <span className="px-2 py-1 text-xs font-semibold bg-amber-500/20 text-amber-500 rounded">
+                      Acumulado!
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {config.description}
+                </p>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Prize Value */}
+                <div>
+                  <p className="text-sm text-muted-foreground">Prêmio Estimado</p>
+                  <p
+                    className="text-3xl font-bold"
+                    style={{ color: config.primaryColor }}
+                  >
+                    {formatCurrency(contest.estimatedValue)}
+                  </p>
+                </div>
+
+                {/* Contest Info */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Trophy className="h-4 w-4" />
+                  <span>Concurso {contest.contestNumber}</span>
+                </div>
+
+                {/* Action Button */}
+                <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
+                  <Button
+                    className="w-full"
+                    style={{
+                      backgroundColor: config.primaryColor,
+                    }}
+                  >
+                    <Dices className="h-4 w-4 mr-2" />
+                    Gerar Números
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
 
       {/* Quick Actions */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Generate Numbers */}
-        <Link href="/dashboard/generate" className="block">
-          <Card className="h-full hover:bg-secondary/50 transition-colors cursor-pointer group">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <Dices className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">Gerar Novo Jogo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Análise estatística inteligente
-                </p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            </CardContent>
-          </Card>
-        </Link>
-
         {/* View Games */}
         <Link href="/dashboard/games" className="block">
           <Card className="h-full hover:bg-secondary/50 transition-colors cursor-pointer group">
@@ -62,16 +128,32 @@ export default async function DashboardPage() {
         </Link>
 
         {/* View Results */}
-        <Link href="/dashboard/results" className="block sm:col-span-2 lg:col-span-1">
+        <Link href="/dashboard/results" className="block">
           <Card className="h-full hover:bg-secondary/50 transition-colors cursor-pointer group">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                <TrendingUp className="h-6 w-6 text-amber-500" />
+                <Trophy className="h-6 w-6 text-amber-500" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">Resultados</h3>
+                <p className="text-sm text-muted-foreground">Verificar acertos</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* View Statistics */}
+        <Link href="/dashboard/statistics" className="block">
+          <Card className="h-full hover:bg-secondary/50 transition-colors cursor-pointer group">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                <TrendingUp className="h-6 w-6 text-emerald-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Estatísticas</h3>
                 <p className="text-sm text-muted-foreground">
-                  Verificar acertos
+                  Análise de padrões
                 </p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -81,40 +163,20 @@ export default async function DashboardPage() {
       </section>
 
       {/* Recent Games */}
-      <section>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Jogos Recentes</CardTitle>
+      {recentGames.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Jogos Recentes</h2>
             <Link href="/dashboard/games">
               <Button variant="ghost" size="sm">
                 Ver todos
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
-          </CardHeader>
-          <CardContent>
-            {recentGames.length > 0 ? (
-              <GameList games={recentGames} showResults />
-            ) : (
-              <div className="text-center py-12">
-                <Dices className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-lg mb-2">
-                  Nenhum jogo ainda
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Gere seu primeiro jogo para começar
-                </p>
-                <Link href="/dashboard/generate">
-                  <Button>
-                    <Dices className="h-4 w-4 mr-2" />
-                    Gerar Primeiro Jogo
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+          </div>
+          <GameList games={recentGames} />
+        </section>
+      )}
     </div>
   );
 }
