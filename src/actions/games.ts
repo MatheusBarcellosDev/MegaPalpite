@@ -51,8 +51,8 @@ export async function generateGame(
       return { success: false, error: "Não autenticado" };
     }
 
-    // Get next contest number
-    const contestNumber = await getNextContestNumber();
+    // Get next contest number for this specific lottery
+    const contestNumber = await getNextContestNumber(lotteryType);
 
     // Generate numbers using selected strategy
     const { numbers, stats } = await generateNumbersWithStrategy(strategy, lotteryType);

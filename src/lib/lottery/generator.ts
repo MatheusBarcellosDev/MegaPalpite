@@ -140,20 +140,26 @@ export async function getDelayedNumbers(
  * Se o último concurso já foi sorteado, retorna o próximo
  * Se o último concurso ainda não foi sorteado, retorna ele mesmo
  */
-export async function getNextContestNumber(): Promise<number> {
+export async function getNextContestNumber(lotteryType: string = "megasena"): Promise<number> {
   const latest = await prisma.contest.findFirst({
+    where: { lotteryType },
     orderBy: { id: "desc" },
     select: { id: true, drawnNumbers: true, drawDate: true },
   });
 
   if (!latest) {
-    // No contests in DB, start with 2955 (current approximate)
-    return 2955;
+    // No contests in DB for this lottery, use approximate current numbers
+    const defaults: Record<string, number> = {
+      megasena: 2955,
+      lotofacil: 3577,
+      quina: 6917,
+    };
+    return defaults[lotteryType] || 1;
   }
 
   // Check if the latest contest has already been drawn
-  // A contest is considered drawn if it has 6 numbers
-  const isDrawn = latest.drawnNumbers && latest.drawnNumbers.length === 6;
+  // A contest is considered drawn if it has numbers
+  const isDrawn = latest.drawnNumbers && latest.drawnNumbers.length > 0;
   
   if (isDrawn) {
     // Latest contest was drawn, next games are for the following contest
