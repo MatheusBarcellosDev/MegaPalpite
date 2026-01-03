@@ -188,25 +188,6 @@ export async function getActiveContestInfo(): Promise<{
   };
 }
 
-/**
- * Obtém dados do concurso mais recente
- */
-export async function getLatestContestFromDB() {
-  const contest = await prisma.contest.findFirst({
-    orderBy: { id: "desc" },
-  });
-
-  if (!contest) return null;
-
-  return {
-    contestNumber: contest.id,
-    drawDate: contest.drawDate,
-    drawnNumbers: contest.drawnNumbers,
-    jackpotValue: Number(contest.jackpotValue),
-    isAccumulated: contest.isAccumulated,
-    nextJackpot: contest.nextJackpot ? Number(contest.nextJackpot) : null,
-  };
-}
 
 /**
  * Gera números usando a estratégia especificada

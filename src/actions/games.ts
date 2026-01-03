@@ -8,11 +8,11 @@ import {
   calculateFrequencyFromDB, 
   generateExplanationContext,
   getNextContestNumber,
-  getLatestContestFromDB,
   getAvailableStrategies,
   countMatches,
   type GenerationStrategy,
 } from "@/lib/lottery/generator";
+import { getLatestContestFromDB } from "@/actions/contests";
 import { generateExplanation } from "@/lib/openai";
 import { GameWithResult } from "@/lib/lottery/types";
 
