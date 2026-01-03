@@ -44,6 +44,7 @@ export interface GeneratedGame {
 
 export interface GameWithResult {
   id: string;
+  lotteryType?: string;
   numbers: number[];
   explanation: string | null;
   contestNumber: number;

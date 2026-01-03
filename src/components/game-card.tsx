@@ -65,7 +65,27 @@ export function GameCard({ game, showResult = false }: GameCardProps) {
             </div>
 
             {/* Info */}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+              {/* Lottery Type */}
+              {game.lotteryType && (() => {
+                const lotteryConfig = {
+                  megasena: { name: "Mega-Sena", icon: "🍀", color: "#22c55e" },
+                  lotofacil: { name: "Lotofácil", icon: "🎯", color: "#ec4899" },
+                  quina: { name: "Quina", icon: "🎲", color: "#8b5cf6" },
+                }[game.lotteryType] || { name: "Mega-Sena", icon: "🍀", color: "#22c55e" };
+                
+                return (
+                  <Badge 
+                    variant="outline" 
+                    className="gap-1"
+                    style={{ borderColor: lotteryConfig.color, color: lotteryConfig.color }}
+                  >
+                    <span>{lotteryConfig.icon}</span>
+                    {lotteryConfig.name}
+                  </Badge>
+                );
+              })()}
+              
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {formatDate(game.createdAt)}
