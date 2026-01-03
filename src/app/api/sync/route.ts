@@ -172,21 +172,14 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
   // Parse drawn numbers
   const drawnNumbers = contest.listaDezenas.map((n: string) => parseInt(n, 10));
   
-  // Check if already exists (for now, just check by ID until lotteryType column is added)
+  // Check if already exists
   const existing = await prisma.contest.findUnique({
     where: { id: contest.numero },
   });
 
-  if (existing && existing.drawnNumbers.length === drawnNumbers.length) {
-    return {
-      success: true,
-      message: `${lotteryType} already up to date`,
-      contestNumber: contest.numero,
-      isNew: false,
-    };
-  }
+  const isNew = !existing;
 
-  // Save new contest or update existing
+  // Always update to ensure we have latest data (including nextDrawDate)
   if (existing) {
     await prisma.contest.update({
       where: { id: contest.numero },

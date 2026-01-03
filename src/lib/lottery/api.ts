@@ -15,13 +15,14 @@ export function formatDate(dateString: string): string {
   if (!dateString) return "Data não disponível";
   
   try {
-    // Handle dd/mm/yyyy format from Caixa API
+    // Handle dates from database (ISO format) or Caixa API (dd/mm/yyyy)
     let date: Date;
     if (dateString.includes("/")) {
       const [day, month, year] = dateString.split("/");
-      date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      // Use UTC to avoid timezone issues
+      date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0));
     } else {
-      date = new Date(dateString + "T00:00:00");
+      date = new Date(dateString);
     }
     
     if (isNaN(date.getTime())) {
@@ -32,6 +33,7 @@ export function formatDate(dateString: string): string {
       weekday: "long",
       day: "numeric",
       month: "long",
+      timeZone: "UTC",
     }).format(date);
   } catch {
     return "Data não disponível";
