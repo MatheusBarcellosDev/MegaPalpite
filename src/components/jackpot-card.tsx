@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Calendar, Timer } from "lucide-react";
+import { Trophy, Calendar, Timer, Sparkles } from "lucide-react";
 import {
   formatCurrency,
   formatDate,
   getTimeUntilDraw,
 } from "@/lib/lottery/api";
 import { FormattedContest } from "@/lib/lottery/types";
+import { getLotteryConfig } from "@/lib/lottery/types-config";
 
 interface JackpotCardProps {
-  contest: FormattedContest | null;
+  contest: (FormattedContest & { lotteryType?: string }) | null;
   loading?: boolean;
   compact?: boolean;
 }
@@ -37,7 +40,7 @@ export function JackpotCard({
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 60000); // Update every minute
+    const interval = setInterval(updateTime, 60000);
 
     return () => clearInterval(interval);
   }, [contest?.nextDrawDate]);
@@ -67,24 +70,35 @@ export function JackpotCard({
     );
   }
 
+  const lotteryType = contest.lotteryType || "megasena";
+  const lotteryConfig = getLotteryConfig(lotteryType as any);
+
   return (
     <Card
-      className={`jackpot-card animate-pulse-glow ${
+      className={`jackpot-card animated-border ${
         compact ? "p-4 md:p-6" : "p-6 md:p-10"
       }`}
+      style={{
+        borderTop: `4px solid ${lotteryConfig.primaryColor}`,
+      }}
     >
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Concurso {contest.contestNumber + 1}
-            </span>
+      <div className="space-y-6">
+        {/* Lottery Name Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{lotteryConfig.icon}</span>
+            <div>
+              <h3 className="text-2xl font-bold" style={{ color: lotteryConfig.primaryColor }}>
+                {lotteryConfig.name}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Concurso {contest.contestNumber + 1}
+              </p>
+            </div>
           </div>
           {contest.isAccumulated && (
-            <Badge variant="secondary" className="bg-primary/20 text-primary">
-              Acumulado!
+            <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/50">
+              🔥 Acumulado!
             </Badge>
           )}
         </div>
@@ -93,44 +107,50 @@ export function JackpotCard({
         <div>
           <p className="text-sm text-muted-foreground mb-1">Prêmio Estimado</p>
           <h2
-            className={`jackpot-value ${
+            className={`font-bold font-mono ${
               compact ? "text-2xl md:text-4xl" : "text-3xl md:text-5xl lg:text-6xl"
             }`}
+            style={{ color: lotteryConfig.primaryColor }}
           >
-            {formatCurrency(contest.jackpotValue)}
+            {formatCurrency(contest.estimatedValue)}
           </h2>
         </div>
 
-        {/* Draw Info */}
-        <div
-          className={`flex flex-wrap gap-4 ${compact ? "gap-3" : "gap-6"} pt-2`}
-        >
-          {/* Next Draw Date */}
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs">Próximo Sorteio</p>
-              <p className="text-sm font-medium text-foreground capitalize">
-                {formatDate(contest.nextDrawDate)}
-              </p>
+              <p className="text-xs text-muted-foreground">Próximo Sorteio</p>
+              <p className="font-medium">{formatDate(contest.nextDrawDate)}</p>
             </div>
           </div>
 
-          {/* Countdown */}
           {timeUntil && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Timer className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-sm">
+              <Timer className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-xs">Faltam</p>
-                <p className="text-sm font-medium text-foreground">
-                  {timeUntil.days > 0 && `${timeUntil.days}d `}
-                  {timeUntil.hours}h {timeUntil.minutes}min
+                <p className="text-xs text-muted-foreground">Tempo Restante</p>
+                <p className="font-medium font-mono">
+                  {timeUntil.days}d {timeUntil.hours}h {timeUntil.minutes}m
                 </p>
               </div>
             </div>
           )}
         </div>
-      </div>
+
+        {/* Generate Button */}
+        <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
+          <Button
+            size="lg"
+            className="w-full"
+            style={{ backgroundColor: lotteryConfig.primaryColor }}
+          >
+            <Sparkles className="h-5 w-5 mr-2" />
+            Gerar Números com IA
+          </Button>
+        </Link>
+     </div>
     </Card>
   );
 }

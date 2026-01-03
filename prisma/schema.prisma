@@ -24,6 +24,7 @@ model Contest {
   id             Int      @id                           // Número do concurso
   lotteryType    String   @default("megasena") @map("lottery_type")
   drawDate       DateTime @map("draw_date")
+  nextDrawDate   DateTime? @map("next_draw_date")
   drawnNumbers   Int[]    @map("drawn_numbers")
   jackpotValue   Decimal  @map("jackpot_value")
   isAccumulated  Boolean  @default(false) @map("is_accumulated")

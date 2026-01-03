@@ -1,242 +1,190 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { JackpotCard } from "@/components/jackpot-card";
-import { Disclaimer } from "@/components/disclaimer";
-import { Logo } from "@/components/logo";
 import { getLatestContestFromDB } from "@/actions/contests";
-import {
-  Dices,
-  TrendingUp,
-  Shield,
-  Sparkles,
-  ChevronRight,
-  BarChart3,
-  Brain,
-  Lock,
-} from "lucide-react";
+import { ACTIVE_LOTTERIES, getLotteryConfig } from "@/lib/lottery/types-config";
+import { Sparkles, TrendingUp, Shield } from "lucide-react";
 
-export const revalidate = 300; // Revalidate every 5 minutes
+export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
-async function LandingPage() {
-  const contest = await getLatestContestFromDB();
+export default async function LandingPage() {
+  // Fetch all lotteries
+  const lotteryPromises = ACTIVE_LOTTERIES.map(async (type) => {
+    const contest = await getLatestContestFromDB(type);
+    const config = getLotteryConfig(type);
+    return { type, contest, config };
+  });
+
+  const lotteries = await Promise.all(lotteryPromises);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border sticky top-0 z-50 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Logo size="lg" />
-            <div className="flex items-center gap-3">
-              <Link href="/auth">
-                <Button variant="ghost">Entrar</Button>
-              </Link>
-              <Link href="/auth">
-                <Button>Começar Grátis</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gradient-to-b from-black via-emerald-950/20 to-black">
       {/* Hero Section */}
-      <main className="flex-1">
-        <section className="py-16 md:py-24 px-4">
-          <div className="container mx-auto max-w-6xl">
-            <div className="text-center space-y-6 mb-12">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 text-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>Análise estatística inteligente</span>
-              </div>
-
-              {/* Title */}
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-                Gerador Inteligente de
-                <br />
-                <span className="gradient-text">Números Mega-Sena</span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Gere números baseados em análise estatística de sorteios
-                anteriores. Não aumentamos suas chances, mas tornamos a
-                experiência mais interessante.
-              </p>
-
-              {/* CTA */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Link href="/auth">
-                  <Button size="lg" className="text-lg px-8 h-14">
-                    <Dices className="h-5 w-5 mr-2" />
-                    Gerar Meus Números
-                  </Button>
-                </Link>
-                <Link href="#features">
-                  <Button size="lg" variant="outline" className="text-lg px-8 h-14">
-                    Como Funciona
-                    <ChevronRight className="h-5 w-5 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Jackpot Card - PROMINENT */}
-            <div className="max-w-2xl mx-auto animate-float">
-              <JackpotCard contest={contest} />
+      <section className="container mx-auto px-4 py-16 sm:py-24 text-center">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Badge */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+              <Sparkles className="h-4 w-4" />
+              <span>Gerador Inteligente com IA</span>
             </div>
           </div>
-        </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-20 px-4 bg-secondary/20">
-          <div className="container mx-auto max-w-6xl">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Como Funciona
-              </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Utilizamos dados históricos para gerar números com base em
-                padrões estatísticos. Tudo para entretenimento.
-              </p>
-            </div>
+          {/* Main Heading - SEO Critical */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight">
+            <span className="text-white">Gere Números para </span>
+            <span className="bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-600 bg-clip-text text-transparent">
+              Mega-Sena, Lotofácil e Quina
+            </span>
+          </h1>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <Card className="p-6 bg-card/50 border-border">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Análise de Frequência
-                </h3>
-                <p className="text-muted-foreground">
-                  Analisamos a frequência de cada número nos últimos 100
-                  sorteios para identificar padrões estatísticos.
-                </p>
-              </Card>
+          {/* Description - SEO Critical */}
+          <p className="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            Gerador gratuito de números para loteria com análise estatística e inteligência artificial. 
+            Aumente suas chances com estratégias baseadas nos últimos sorteios!
+          </p>
 
-              {/* Feature 2 */}
-              <Card className="p-6 bg-card/50 border-border">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Equilíbrio Estatístico
-                </h3>
-                <p className="text-muted-foreground">
-                  Balanceamos números pares/ímpares e baixos/altos seguindo
-                  padrões observados em sorteios anteriores.
-                </p>
-              </Card>
-
-              {/* Feature 3 */}
-              <Card className="p-6 bg-card/50 border-border">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <Brain className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Explicação com IA
-                </h3>
-                <p className="text-muted-foreground">
-                  A IA explica o raciocínio por trás de cada seleção de números,
-                  tornando a experiência educativa.
-                </p>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust Section */}
-        <section className="py-20 px-4">
-          <div className="container mx-auto max-w-6xl">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div className="space-y-6">
-                <h2 className="text-3xl md:text-4xl font-bold">
-                  Transparente e Seguro
-                </h2>
-                <p className="text-lg text-muted-foreground">
-                  Todos os dados de sorteios vêm diretamente da API oficial da
-                  Caixa Econômica Federal. Suas informações são protegidas com
-                  criptografia de ponta a ponta.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Shield className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Dados Oficiais</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Resultados obtidos diretamente da Caixa
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Lock className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Privacidade Garantida</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Seus jogos são privados e seguros
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Disclaimer Card */}
-              <div className="space-y-6">
-                <Disclaimer variant="card" />
-                <Card className="p-6 bg-card/50">
-                  <h4 className="font-semibold mb-2">Importante Saber</h4>
-                  <ul className="text-sm text-muted-foreground space-y-2">
-                    <li>• Cada sorteio é independente e aleatório</li>
-                    <li>• Padrões passados não garantem resultados futuros</li>
-                    <li>• Este app é para entretenimento apenas</li>
-                    <li>• Jogue com responsabilidade</li>
-                  </ul>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-20 px-4 bg-gradient-to-b from-primary/5 to-transparent">
-          <div className="container mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Pronto para começar?
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Crie sua conta gratuita e comece a gerar números inteligentes hoje
-              mesmo.
-            </p>
+          {/* CTA Button */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link href="/auth">
-              <Button size="lg" className="text-lg px-8 h-14">
-                <Dices className="h-5 w-5 mr-2" />
-                Criar Conta Grátis
+              <Button
+                size="lg"
+                className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold px-8 py-6 text-lg"
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                Começar Grátis Agora
               </Button>
             </Link>
           </div>
-        </section>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8 px-4">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <Logo size="sm" showTagline={false} />
-            <Disclaimer variant="inline" />
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center gap-8 text-gray-400 pt-8">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+              <span>Análise com IA</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-emerald-500" />
+              <span>100% Gratuito</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-emerald-500" />
+              <span>Geração Ilimitada</span>
+            </div>
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* Lotteries Section */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Section Header - SEO */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              Prêmios Estimados - Loterias da Caixa
+            </h2>
+            <p className="text-lg text-gray-400">
+              Valores atualizados em tempo real. Gere seus números agora!
+            </p>
+          </div>
+
+          {/* Desktop: Grid of 3 columns */}
+          <div className="hidden md:grid md:grid-cols-3 gap-6">
+            {lotteries.map(({ type, contest, config }) => (
+              <JackpotCard key={type} contest={{...contest, lotteryType: type}} compact />
+            ))}
+          </div>
+
+          {/* Mobile: Carousel */}
+          <div className="md:hidden">
+            <div className="relative">
+              <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide">
+                {lotteries.map(({ type, contest, config }) => (
+                  <div key={type} className="min-w-[85vw] snap-center">
+                    <JackpotCard contest={{...contest, lotteryType: type}} />
+                  </div>
+                ))}
+              </div>
+              {/* Scroll indicator */}
+              <div className="flex justify-center gap-2 mt-4">
+                {lotteries.map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-gray-600"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SEO Content Section */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="max-w-3xl mx-auto space-y-8 text-gray-300">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Como funciona o gerador de números para loteria?
+            </h2>
+            <p className="leading-relaxed">
+              Nosso gerador utiliza <strong>inteligência artificial</strong> para analisar os últimos 100 sorteios 
+              da Mega-Sena, Lotofácil e Quina. Com base em <strong>análise estatística</strong>, identificamos 
+              números quentes (mais sorteados), números frios (menos sorteados) e números atrasados para gerar 
+              combinações inteligentes.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Estratégias Personalizadas
+            </h3>
+            <p className="leading-relaxed">
+              Escolha entre diferentes estratégias: <strong>números quentes</strong> (baseados em frequência), 
+              <strong>números frios</strong> (apostas ousadas), <strong>balanceados</strong> (mix equilibrado) 
+              ou <strong>mistos</strong>. Cada estratégia usa dados reais dos concursos anteriores.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              100% Gratuito e Ilimitado
+            </h3>
+            <p className="leading-relaxed">
+              Gere <strong>quantos jogos quiser</strong>, completamente grátis! Sem limites, sem cadastros complicados. 
+              Todos os seus jogos ficam salvos para você conferir resultados e acompanhar seus palpites.
+            </p>
+          </div>
+
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-6 mt-8">
+            <p className="text-sm text-amber-200">
+              <strong>Aviso:</strong> Este gerador não aumenta suas chances matemáticas de ganhar na loteria. 
+              Todos os números têm a mesma probabilidade. Nossa ferramenta torna a escolha mais informada 
+              baseada em dados históricos, mas não garante prêmios. Jogue com responsabilidade.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="container mx-auto px-4 py-16 text-center">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+            Pronto para gerar seus números da sorte?
+          </h2>
+          <p className="text-xl text-gray-300">
+            Comece agora e tenha acesso a análises estatísticas completas
+          </p>
+          <Link href="/auth">
+            <Button
+              size="lg"
+              className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold px-10 py-6 text-lg"
+            >
+              Gerar Números Grátis
+            </Button>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
-
-export default LandingPage;

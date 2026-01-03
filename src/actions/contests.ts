@@ -3,15 +3,31 @@
 import { prisma } from "@/lib/prisma";
 import { FormattedContest } from "@/lib/lottery/types";
 
-// Get next draw date (calculated on server)
-function getNextDrawDate(): string {
+// Get next draw date based on lottery type
+function getNextDrawDate(lotteryType: string = "megasena"): string {
   const now = new Date();
-  const dayOfWeek = now.getDay();
+  const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
 
-  // Mega-Sena draws on Tuesday (2), Thursday (4), and Saturday (6)
-  const drawDays = [2, 4, 6];
+  let drawDays: number[];
+  
+  // Define draw days for each lottery
+  switch (lotteryType) {
+    case "megasena":
+      // Mega-Sena: Tuesday (2), Thursday (4), Saturday (6)
+      drawDays = [2, 4, 6];
+      break;
+    case "lotofacil":
+    case "quina":
+      // Lotofácil and Quina: Monday to Saturday (1-6)
+      drawDays = [1, 2, 3, 4, 5, 6];
+      break;
+    default:
+      drawDays = [2, 4, 6];
+  }
+
   let daysUntilNext = 1;
 
+  // Find next draw day
   for (let i = 1; i <= 7; i++) {
     const nextDay = (dayOfWeek + i) % 7;
     if (drawDays.includes(nextDay)) {
@@ -33,13 +49,15 @@ export async function getLatestContestFromDB(lotteryType: string = "megasena"): 
     });
 
     if (!dbContest) {
-      return getDefaultContest();
+      return getDefaultContest(lotteryType);
     }
 
     return {
       contestNumber: dbContest.id,
       drawDate: dbContest.drawDate.toISOString().split("T")[0],
-      nextDrawDate: getNextDrawDate(),
+      nextDrawDate: dbContest.nextDrawDate 
+        ? dbContest.nextDrawDate.toISOString().split("T")[0]
+        : getNextDrawDate(lotteryType),
       jackpotValue: Number(dbContest.nextJackpot) || Number(dbContest.jackpotValue),
       estimatedValue: Number(dbContest.nextJackpot) || Number(dbContest.jackpotValue),
       drawnNumbers: dbContest.drawnNumbers,
@@ -48,16 +66,16 @@ export async function getLatestContestFromDB(lotteryType: string = "megasena"): 
     };
   } catch (error) {
     console.error("Error fetching contest from DB:", error);
-    return getDefaultContest();
+    return getDefaultContest(lotteryType);
   }
 }
 
-function getDefaultContest(): FormattedContest {
+function getDefaultContest(lotteryType: string = "megasena"): FormattedContest {
   return {
     contestNumber: 2956,
     drawDate: new Date().toISOString().split("T")[0],
-    nextDrawDate: getNextDrawDate(),
-    jackpotValue: 3500000, // R$ 3.5 milhões como fallback
+    nextDrawDate: getNextDrawDate(lotteryType),
+    jackpotValue: 3500000,
     estimatedValue: 3500000,
     drawnNumbers: [],
     isAccumulated: true,

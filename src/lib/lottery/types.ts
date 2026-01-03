@@ -3,7 +3,7 @@
 export interface LotteryContest {
   numero: number;
   dataApuracao: string;
-  dataProximoConcurso: string;
+  dataProximoConcurso?: string;
   valorAcumuladoProximoConcurso: number;
   valorEstimadoProximoConcurso: number;
   listaDezenas: string[];

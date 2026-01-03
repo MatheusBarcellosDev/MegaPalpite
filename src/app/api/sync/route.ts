@@ -4,24 +4,10 @@ import { sendResultEmail } from "@/lib/email";
 import { countMatches } from "@/lib/lottery/generator";
 import { createClient } from "@supabase/supabase-js";
 import { LotteryType, ACTIVE_LOTTERIES, getLotteryConfig } from "@/lib/lottery/types-config";
+import { LotteryContest } from "@/lib/lottery/types";
 
 const CAIXA_API_BASE = "https://servicebus2.caixa.gov.br/portaldeloterias/api";
 const FALLBACK_API_BASE = "https://loteriascaixa-api.herokuapp.com/api";
-
-interface LotteryContest {
-  numero: number;
-  dataApuracao: string;
-  listaDezenas: string[];
-  valorAcumuladoProximoConcurso: number;
-  valorEstimadoProximoConcurso: number;
-  acumulado: boolean;
-  listaRateioPremio?: Array<{
-    faixa: number;
-    numeroDeGanhadores: number;
-    valorPremio: number;
-    descricaoFaixa: string;
-  }>;
-}
 
 // Helper function to try fetching from multiple APIs
 async function fetchContestData(lotteryType: LotteryType): Promise<LotteryContest | null> {
@@ -205,10 +191,11 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
       where: { id: contest.numero },
       data: {
         drawnNumbers,
+        nextDrawDate: contest.dataProximoConcurso ? parseDate(contest.dataProximoConcurso) : null,
         jackpotValue: contest.valorAcumuladoProximoConcurso || contest.valorEstimadoProximoConcurso,
         isAccumulated: contest.acumulado,
         nextJackpot: contest.valorEstimadoProximoConcurso,
-        winnersData: contest.listaRateioPremio || [],
+        winnersData: (contest.listaRateioPremio || []) as any,
       },
     });
   } else {
@@ -217,11 +204,12 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
         id: contest.numero,
         lotteryType,
         drawDate: parseDate(contest.dataApuracao),
+        nextDrawDate: contest.dataProximoConcurso ? parseDate(contest.dataProximoConcurso) : null,
         drawnNumbers,
         jackpotValue: contest.valorAcumuladoProximoConcurso || contest.valorEstimadoProximoConcurso,
         isAccumulated: contest.acumulado,
         nextJackpot: contest.valorEstimadoProximoConcurso,
-        winnersData: contest.listaRateioPremio || [],
+        winnersData: (contest.listaRateioPremio || []) as any,
       },
     });
   }
