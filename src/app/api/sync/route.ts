@@ -68,7 +68,8 @@ function parseDate(dateStr: string): Date {
   const day = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10);
   const year = parseInt(parts[2], 10);
-  return new Date(year, month - 1, day);
+  // Use UTC to avoid timezone issues
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
 // Check games and notify users for a specific lottery
