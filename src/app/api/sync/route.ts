@@ -26,6 +26,7 @@ async function fetchContestData(lotteryType: LotteryType): Promise<LotteryContes
     });
     if (response.ok) {
       const data = await response.json();
+      console.log(`✅ Caixa API success for ${lotteryType}`);
       return data as LotteryContest;
     }
   } catch (e) {
@@ -40,10 +41,12 @@ async function fetchContestData(lotteryType: LotteryType): Promise<LotteryContes
     });
     if (response.ok) {
       const data = await response.json();
+      console.log(`📡 Fallback API data for ${lotteryType}:`, JSON.stringify(data).substring(0, 500));
       // Map alternative API format to our interface
       return {
         numero: data.concurso,
         dataApuracao: data.data,
+        dataProximoConcurso: data.dataProximoConcurso, // Add this field
         listaDezenas: data.dezenas,
         valorAcumuladoProximoConcurso: data.valorAcumuladoProximoConcurso || 0,
         valorEstimadoProximoConcurso: data.valorEstimadoProximoConcurso || 0,
