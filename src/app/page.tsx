@@ -56,6 +56,15 @@ export default async function LandingPage() {
                 Começar Grátis Agora
               </Button>
             </Link>
+            <Link href="/resultados">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-emerald-500/20 hover:border-emerald-500/40 px-8 py-6 text-lg"
+              >
+                Ver Resultados
+              </Button>
+            </Link>
           </div>
 
           {/* Trust Badges */}

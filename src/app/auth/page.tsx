@@ -1,6 +1,6 @@
 import { AuthForm } from "@/components/auth-form";
 import { Disclaimer } from "@/components/disclaimer";
-import { Dices } from "lucide-react";
+import { Logo } from "@/components/logo";
 import Link from "next/link";
 
 interface AuthPageProps {
@@ -15,13 +15,8 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
       {/* Header */}
       <header className="border-b border-border py-4">
         <div className="container mx-auto px-4">
-          <Link href="/" className="flex items-center gap-2 w-fit">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-              <Dices className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-lg">
-              Mega-Sena <span className="text-primary">Smart</span>
-            </span>
+          <Link href="/" className="w-fit inline-block">
+            <Logo />
           </Link>
         </div>
       </header>
