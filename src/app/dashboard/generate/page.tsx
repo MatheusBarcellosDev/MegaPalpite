@@ -9,7 +9,7 @@ import { NumberBalls } from "@/components/number-balls";
 import { HotColdNumbers } from "@/components/hot-cold-numbers";
 import { LotterySelector, LOTTERY_OPTIONS } from "@/components/lottery-selector";
 import { generateGame, getStrategies, getLatestContest } from "@/actions/games";
-import { getHotColdNumbers } => "@/actions/statistics";
+import { getHotColdNumbers } from "@/actions/statistics";
 import { 
   Dices, 
   Sparkles, 
