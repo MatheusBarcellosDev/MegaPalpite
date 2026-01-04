@@ -40,6 +40,7 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export function Navbar() {
             </DropdownMenu>
 
             {/* Mobile Menu */}
-            <Sheet>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon">
                   <Menu className="h-5 w-5" />
@@ -137,7 +138,7 @@ export function Navbar() {
                   {navItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
-                      <Link key={item.href} href={item.href}>
+                      <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                         <Button
                           variant={isActive ? "secondary" : "ghost"}
                           className={`w-full justify-start ${
