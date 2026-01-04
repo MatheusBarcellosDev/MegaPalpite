@@ -38,18 +38,18 @@ export default async function GamesPage() {
       <Card>
         <CardHeader>
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all" className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Todos ({games.length})
+            <TabsList className="grid w-full grid-cols-3 gap-1">
+              <TabsTrigger value="all" className="flex items-center gap-1 text-xs sm:text-sm px-2">
+                <History className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:inline" />
+                <span className="truncate">Todos ({games.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="pending" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Pendentes ({pendingGames.length})
+              <TabsTrigger value="pending" className="flex items-center gap-1 text-xs sm:text-sm px-2">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:inline" />
+                <span className="truncate">Pendentes ({pendingGames.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="checked" className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                Verificados ({checkedGames.length})
+              <TabsTrigger value="checked" className="flex items-center gap-1 text-xs sm:text-sm px-2">
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:inline" />
+                <span className="truncate">Verificados ({checkedGames.length})</span>
               </TabsTrigger>
             </TabsList>
 
