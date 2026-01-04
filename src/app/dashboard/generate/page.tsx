@@ -7,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NumberBalls } from "@/components/number-balls";
 import { HotColdNumbers } from "@/components/hot-cold-numbers";
-import { Disclaimer } from "@/components/disclaimer";
 import { LotterySelector, LOTTERY_OPTIONS } from "@/components/lottery-selector";
 import { generateGame, getStrategies, getLatestContest } from "@/actions/games";
-import { getHotColdNumbers } from "@/actions/statistics";
+import { getHotColdNumbers } => "@/actions/statistics";
 import { 
   Dices, 
   Sparkles, 
@@ -303,9 +302,6 @@ function GeneratePageContent() {
           </Card>
         </div>
       )}
-
-      {/* Disclaimer */}
-      <Disclaimer variant="inline" />
     </div>
   );
 }
