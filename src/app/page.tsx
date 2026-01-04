@@ -167,7 +167,7 @@ export default async function LandingPage() {
 
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-6 mt-8">
             <p className="text-sm text-amber-200">
-              <strong>Aviso:</strong> Este gerador não aumenta suas chances matemáticas de ganhar na loteria. 
+              <strong></strong> Este gerador não aumenta suas chances matemáticas de ganhar na loteria. 
               Todos os números têm a mesma probabilidade. Nossa ferramenta torna a escolha mais informada 
               baseada em dados históricos, mas não garante prêmios. Jogue com responsabilidade.
             </p>
