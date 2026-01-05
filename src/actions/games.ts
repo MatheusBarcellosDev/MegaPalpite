@@ -172,12 +172,13 @@ export async function getUserGames(): Promise<GameWithResult[]> {
 
         return {
           id: game.id,
+          lotteryType: game.lotteryType,
           numbers: game.numbers,
           explanation: game.explanation,
           contestNumber: game.contestNumber,
           createdAt: game.createdAt.toISOString(),
           hits: game.result?.hits,
-          checkedAt: game.result?.checkedAt.toISOString(),
+          checkedAt: game.result?.checkedAt?.toISOString(),
           drawnNumbers,
         };
       })
