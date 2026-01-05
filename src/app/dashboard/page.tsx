@@ -87,10 +87,12 @@ export default async function DashboardPage() {
                 {(() => {
                   const nextContestNumber = contest.contestNumber + 1;
                   const nextDrawDate = new Date(contest.nextDrawDate);
+                  // Sorteio é às 20:00 BRT (23:00 UTC)
+                  nextDrawDate.setUTCHours(23, 0, 0, 0);
                   const now = new Date();
-                  // Concurso fecha 3 horas antes do sorteio
+                  // Concurso fecha 3 horas antes do sorteio (17:00 BRT)
                   const closingTime = new Date(nextDrawDate.getTime() - (3 * 60 * 60 * 1000));
-                  const isContestClosed = closingTime < now;
+                  const isContestClosed = now > closingTime;
                   
                   return (
                     <>
