@@ -92,7 +92,7 @@ export function JackpotCard({
                 {lotteryConfig.name}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Concurso {contest.contestNumber + 1}
+                Concurso {contest.contestNumber + 1} • {formatDate(contest.drawDate)}
               </p>
             </div>
           </div>
