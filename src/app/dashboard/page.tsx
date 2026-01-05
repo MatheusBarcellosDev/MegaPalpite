@@ -86,7 +86,7 @@ export default async function DashboardPage() {
                 {/* Contest Info */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Trophy className="h-4 w-4" />
-                  <span>Concurso {contest.contestNumber}</span>
+                  <span>Concurso {contest.contestNumber} • {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(contest.drawDate))}</span>
                 </div>
 
                 {/* Action Button */}
