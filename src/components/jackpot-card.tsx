@@ -74,6 +74,11 @@ export function JackpotCard({
 
   const lotteryType = contest.lotteryType || "megasena";
   const lotteryConfig = getLotteryConfig(lotteryType as any);
+  
+  // Check if contest is closed (nextDrawDate has passed)
+  const nextDrawDate = new Date(contest.nextDrawDate);
+  const now = new Date();
+  const isContestClosed = nextDrawDate < now;
 
   return (
     <Card
@@ -94,7 +99,7 @@ export function JackpotCard({
                 {lotteryConfig.name}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Concurso {contest.contestNumber + 1}{showDrawDate ? ` • ${formatDate(contest.drawDate)}` : ''}
+                Concurso {contest.contestNumber + 1}{showDrawDate ? ` • ${formatDate(contest.nextDrawDate)}` : ''}
               </p>
             </div>
           </div>
@@ -141,17 +146,27 @@ export function JackpotCard({
           )}
         </div>
 
-        {/* Generate Button */}
-        <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
-          <Button
-            size="lg"
-            className="w-full"
-            style={{ backgroundColor: lotteryConfig.primaryColor }}
-          >
-            <Sparkles className="h-5 w-5 mr-2" />
-            Gerar Números com IA
-          </Button>
-        </Link>
+        {/* Generate Button or Closed Message */}
+        {isContestClosed ? (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-center">
+            <div className="flex items-center justify-center gap-2 text-amber-500 mb-1">
+              <Timer className="h-5 w-5" />
+              <span className="font-semibold">Concurso encerrado</span>
+            </div>
+            <p className="text-sm text-muted-foreground">Aguardando resultado e próximo concurso</p>
+          </div>
+        ) : (
+          <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
+            <Button
+              size="lg"
+              className="w-full"
+              style={{ backgroundColor: lotteryConfig.primaryColor }}
+            >
+              <Sparkles className="h-5 w-5 mr-2" />
+              Gerar Números com IA
+            </Button>
+          </Link>
+        )}
      </div>
     </Card>
   );

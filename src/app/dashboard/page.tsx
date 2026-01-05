@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameList } from "@/components/game-card";
 import { getLatestContestFromDB } from "@/actions/contests";
 import { getRecentGames } from "@/actions/games";
-import { Dices, History, TrendingUp, ChevronRight, Trophy } from "lucide-react";
+import { Dices, History, TrendingUp, ChevronRight, Trophy, Clock, Calendar } from "lucide-react";
 import { ACTIVE_LOTTERIES, getLotteryConfig } from "@/lib/lottery/types-config";
 
 export const dynamic = "force-dynamic";
@@ -84,23 +84,45 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Contest Info */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Trophy className="h-4 w-4" />
-                  <span>Concurso {contest.contestNumber} • {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(contest.drawDate))}</span>
-                </div>
-
-                {/* Action Button */}
-                <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
-                  <Button
-                    className="w-full"
-                    style={{
-                      backgroundColor: config.primaryColor,
-                    }}
-                  >
-                    <Dices className="h-4 w-4 mr-2" />
-                    Gerar Números
-                  </Button>
-                </Link>
+                {(() => {
+                  const nextContestNumber = contest.contestNumber + 1;
+                  const nextDrawDate = new Date(contest.nextDrawDate);
+                  const now = new Date();
+                  const isContestClosed = nextDrawDate < now;
+                  
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          Concurso {nextContestNumber} • {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(nextDrawDate)}
+                        </span>
+                      </div>
+                      
+                      {isContestClosed ? (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 text-amber-500">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-sm font-medium">Concurso encerrado</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Aguardando resultado e próximo concurso</p>
+                        </div>
+                      ) : (
+                        <Link href={`/dashboard/generate?lottery=${lotteryType}`}>
+                          <Button
+                            className="w-full"
+                            style={{
+                              backgroundColor: config.primaryColor,
+                            }}
+                          >
+                            <Dices className="h-4 w-4 mr-2" />
+                            Gerar Números
+                          </Button>
+                        </Link>
+                      )}
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           ))}
