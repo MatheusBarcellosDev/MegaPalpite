@@ -19,12 +19,14 @@ interface JackpotCardProps {
   contest: (FormattedContest & { lotteryType?: string }) | null;
   loading?: boolean;
   compact?: boolean;
+  showDrawDate?: boolean;
 }
 
 export function JackpotCard({
   contest,
   loading = false,
   compact = false,
+  showDrawDate = false,
 }: JackpotCardProps) {
   const [timeUntil, setTimeUntil] = useState<{
     days: number;
@@ -92,7 +94,7 @@ export function JackpotCard({
                 {lotteryConfig.name}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Concurso {contest.contestNumber + 1} • {formatDate(contest.drawDate)}
+                Concurso {contest.contestNumber + 1}{showDrawDate ? ` • ${formatDate(contest.drawDate)}` : ''}
               </p>
             </div>
           </div>
