@@ -88,7 +88,9 @@ export default async function DashboardPage() {
                   const nextContestNumber = contest.contestNumber + 1;
                   const nextDrawDate = new Date(contest.nextDrawDate);
                   const now = new Date();
-                  const isContestClosed = nextDrawDate < now;
+                  // Concurso fecha 3 horas antes do sorteio
+                  const closingTime = new Date(nextDrawDate.getTime() - (3 * 60 * 60 * 1000));
+                  const isContestClosed = closingTime < now;
                   
                   return (
                     <>

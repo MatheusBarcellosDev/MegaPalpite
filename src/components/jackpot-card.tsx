@@ -75,10 +75,11 @@ export function JackpotCard({
   const lotteryType = contest.lotteryType || "megasena";
   const lotteryConfig = getLotteryConfig(lotteryType as any);
   
-  // Check if contest is closed (nextDrawDate has passed)
+  // Check if contest is closed (3 hours before draw)
   const nextDrawDate = new Date(contest.nextDrawDate);
   const now = new Date();
-  const isContestClosed = nextDrawDate < now;
+  const closingTime = new Date(nextDrawDate.getTime() - (3 * 60 * 60 * 1000));
+  const isContestClosed = closingTime < now;
 
   return (
     <Card
