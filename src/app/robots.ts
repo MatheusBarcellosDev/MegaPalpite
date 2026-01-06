@@ -14,6 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/'],
       },
     ],
-    sitemap: 'https://mega-palpite.vercel.app/sitemap.xml',
+    sitemap: 'https://www.megapalpiteai.com.br/sitemap.xml',
   }
 }

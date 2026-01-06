@@ -4,8 +4,8 @@ export const siteConfig = {
   name: "MegaPalpite",
   title: "MegaPalpite - Gerador de Números para Loteria com IA | Mega-Sena, Lotofácil e Quina",
   description: "Gere números inteligentes para Mega-Sena, Lotofácil e Quina com IA. Análise estatística gratuita, estratégias personalizadas e histórico completo. Aumente suas chances de ganhar!",
-  url: "https://mega-palpite.vercel.app",
-  ogImage: "https://mega-palpite.vercel.app/og-image.png",
+  url: "https://www.megapalpiteai.com.br",
+  ogImage: "https://www.megapalpiteai.com.br/og-image.png",
   keywords: [
     "gerador números mega sena",
     "números loteria",
@@ -26,7 +26,7 @@ export const siteConfig = {
   authors: [
     {
       name: "MegaPalpite",
-      url: "https://mega-palpite.vercel.app",
+      url: "https://www.megapalpiteai.com.br",
     },
   ],
   creator: "MegaPalpite",
