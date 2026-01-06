@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Trigger Sync API
         run: |
-          response=$(curl -s -w "\n%{http_code}" "https://mega-palpite.vercel.app/api/sync")
+          response=$(curl -s -w "\n%{http_code}" "https://www.megapalpiteai.com.br/api/sync")
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)
           echo "Response: $body"
