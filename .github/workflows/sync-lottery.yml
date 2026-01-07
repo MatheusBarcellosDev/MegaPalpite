@@ -3,14 +3,15 @@ name: Sync Lottery Data
 on:
   schedule:
     # Horários em UTC (subtrair 3h para Brasília)
-    # Sorteios são ~20h BRT, então sincronizamos:
-    - cron: '30 23 * * 2,4,6'  # 20:30 BRT - logo após sorteio
-    - cron: '0 0 * * 3,5,0'    # 21:00 BRT
-    - cron: '30 0 * * 3,5,0'   # 21:30 BRT
-    - cron: '0 1 * * 3,5,0'    # 22:00 BRT
-    - cron: '0 2 * * 3,5,0'    # 23:00 BRT
+    # Sorteios acontecem de segunda a sábado ~20h BRT
+    # Logo após sorteio (20:30-23:00 BRT)
+    - cron: '30 23 * * 0,1,2,3,4,5'  # 20:30 BRT - dom a sex
+    - cron: '0 0 * * 1,2,3,4,5,6'    # 21:00 BRT - seg a sáb
+    - cron: '30 0 * * 1,2,3,4,5,6'   # 21:30 BRT
+    - cron: '0 1 * * 1,2,3,4,5,6'    # 22:00 BRT
+    - cron: '0 2 * * 1,2,3,4,5,6'    # 23:00 BRT
     # Também rodar de manhã para garantir dados atualizados
-    - cron: '0 12 * * *'       # 09:00 BRT - todos os dias
+    - cron: '0 12 * * *'             # 09:00 BRT - todos os dias
   workflow_dispatch: # Allows manual trigger
 
 jobs:
