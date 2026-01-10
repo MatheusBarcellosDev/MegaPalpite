@@ -5,7 +5,7 @@ export const siteConfig = {
   title: "MegaPalpite - Gerador de Números para Loteria com IA | Mega-Sena, Lotofácil e Quina",
   description: "Gere números inteligentes para Mega-Sena, Lotofácil e Quina com IA. Análise estatística gratuita, estratégias personalizadas e histórico completo. Aumente suas chances de ganhar!",
   url: "https://www.megapalpiteai.com.br",
-  ogImage: "https://www.megapalpiteai.com.br/og-image.png",
+  ogImage: "https://www.megapalpiteai.com.br/compartilhar.png",
   keywords: [
     "gerador números mega sena",
     "números loteria",
