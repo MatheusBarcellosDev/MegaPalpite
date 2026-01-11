@@ -71,8 +71,8 @@ export async function calculateFrequencyFromDB(
 ): Promise<NumberFrequency[]> {
   const config = getLotteryConfig(lotteryType);
   
-  // Note: lotteryType filter will be added after DB migration
   const contests = await prisma.contest.findMany({
+    where: { lotteryType },
     orderBy: { id: "desc" },
     take: contestCount,
     select: { drawnNumbers: true },
