@@ -250,7 +250,7 @@ export async function generateNumbersWithStrategy(
   let numbers = Array.from(selected);
 
   // Aplica restrições estatísticas
-  numbers = applyStatisticalConstraints(numbers, frequency);
+  numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber);
 
   // Ordena os números
   numbers.sort((a, b) => a - b);
@@ -266,7 +266,9 @@ export async function generateNumbersWithStrategy(
  */
 function applyStatisticalConstraints(
   numbers: number[],
-  frequency: NumberFrequency[]
+  frequency: NumberFrequency[],
+  minNumber: number,
+  maxNumber: number
 ): number[] {
   let result = [...numbers];
   const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
@@ -274,17 +276,17 @@ function applyStatisticalConstraints(
   // Verifica equilíbrio par/ímpar (2-4 de cada)
   const oddCount = result.filter((n: number) => n % 2 === 1).length;
   if (oddCount < 2 || oddCount > 4) {
-    result = rebalance(result, frequencyMap, "oddEven");
+    result = rebalance(result, frequencyMap, "oddEven", minNumber, maxNumber);
   }
 
   // Verifica equilíbrio alto/baixo (2-4 de cada)
   const lowCount = result.filter((n: number) => n <= 30).length;
   if (lowCount < 2 || lowCount > 4) {
-    result = rebalance(result, frequencyMap, "highLow");
+    result = rebalance(result, frequencyMap, "highLow", minNumber, maxNumber);
   }
 
   // Evita mais de 2 consecutivos
-  result = removeExcessiveSequentials(result, frequencyMap);
+  result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber);
 
   return result;
 }
@@ -292,7 +294,9 @@ function applyStatisticalConstraints(
 function rebalance(
   numbers: number[],
   frequencyMap: Map<number, NumberFrequency>,
-  type: "oddEven" | "highLow"
+  type: "oddEven" | "highLow",
+  minNumber: number,
+  maxNumber: number
 ): number[] {
   const result = [...numbers];
   const isTarget = type === "oddEven" 
@@ -308,7 +312,7 @@ function rebalance(
       const toRemove = result.find((n) => !isTarget(n));
       if (toRemove !== undefined) {
         const idx = result.indexOf(toRemove);
-        const candidates = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1)
+        const candidates = Array.from({ length: maxNumber - minNumber + 1 }, (_: unknown, i: number) => i + minNumber)
           .filter((n: number) => isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
@@ -319,7 +323,7 @@ function rebalance(
       const toRemove = result.find(isTarget);
       if (toRemove !== undefined) {
         const idx = result.indexOf(toRemove);
-        const candidates = Array.from({ length: 60 }, (_: unknown, i: number) => i + 1)
+        const candidates = Array.from({ length: maxNumber - minNumber + 1 }, (_: unknown, i: number) => i + minNumber)
           .filter((n: number) => !isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
@@ -334,7 +338,9 @@ function rebalance(
 
 function removeExcessiveSequentials(
   numbers: number[],
-  frequencyMap: Map<number, NumberFrequency>
+  frequencyMap: Map<number, NumberFrequency>,
+  minNumber: number,
+  maxNumber: number
 ): number[] {
   const sorted = [...numbers].sort((a: number, b: number) => a - b);
   
@@ -356,7 +362,7 @@ function removeExcessiveSequentials(
     // Encontra o número do meio da sequência e substitui
     for (let i = 1; i < sorted.length - 1; i++) {
       if (sorted[i] === sorted[i - 1] + 1 && sorted[i] === sorted[i + 1] - 1) {
-        const candidates = Array.from({ length: 60 }, (_: unknown, j: number) => j + 1)
+        const candidates = Array.from({ length: maxNumber - minNumber + 1 }, (_: unknown, j: number) => j + minNumber)
           .filter((n: number) => !sorted.includes(n) && Math.abs(n - sorted[i - 1]) > 1 && Math.abs(n - sorted[i + 1]) > 1);
         if (candidates.length > 0) {
           sorted[i] = candidates[Math.floor(Math.random() * candidates.length)];
