@@ -215,9 +215,17 @@ export async function generateNumbersWithStrategy(
   const delayed = await getDelayedNumbers(30, lotteryType);
 
   // Separa números por categoria
-  const hotNumbers = frequency.slice(0, 15).map((f: NumberFrequency) => f.number); // Top 15 mais frequentes
-  const coldNumbers = delayed.length > 0 ? delayed : frequency.slice(-15).map((f: NumberFrequency) => f.number);
-  const balancedNumbers = frequency.slice(15, 45).map((f: NumberFrequency) => f.number); // Meio da tabela
+  // Se não há dados suficientes (ex: Lotofácil tem só 25 números), usa todo o range disponível
+  const totalAvailable = frequency.length;
+  const hotNumbers = totalAvailable > 0 
+    ? frequency.slice(0, Math.min(15, Math.floor(totalAvailable / 2))).map((f: NumberFrequency) => f.number)
+    : [];
+  const coldNumbers = delayed.length > 0 
+    ? delayed 
+    : (totalAvailable > 15 ? frequency.slice(-15).map((f: NumberFrequency) => f.number) : []);
+  const balancedNumbers = totalAvailable > 15
+    ? frequency.slice(Math.min(15, Math.floor(totalAvailable / 3)), Math.min(45, Math.floor(totalAvailable * 0.83))).map((f: NumberFrequency) => f.number)
+    : frequency.slice(0, totalAvailable).map((f: NumberFrequency) => f.number);
 
   const selected: Set<number> = new Set();
 
