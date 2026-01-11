@@ -51,11 +51,16 @@ export async function generateGame(
       return { success: false, error: "Não autenticado" };
     }
 
+    console.log(`[GENERATE] Starting generation for ${lotteryType} with strategy ${strategy}`);
+    
     // Get next contest number for this specific lottery
     const contestNumber = await getNextContestNumber(lotteryType);
+    console.log(`[GENERATE] Contest number: ${contestNumber}`);
 
     // Generate numbers using selected strategy
+    console.log(`[GENERATE] Calling generateNumbersWithStrategy...`);
     const { numbers, stats } = await generateNumbersWithStrategy(strategy, lotteryType);
+    console.log(`[GENERATE] Generated numbers:`, numbers);
 
     // Calculate frequencies for explanation context
     const frequencies = await calculateFrequencyFromDB(100, lotteryType as any);
@@ -97,8 +102,8 @@ export async function generateGame(
       },
     };
   } catch (error) {
-    console.error("Error generating game:", error);
-    return { success: false, error: "Erro ao gerar números" };
+    console.error(`[GENERATE ERROR] Lottery: ${lotteryType}, Error:`, error);
+    return { success: false, error: `Erro ao gerar números: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
 

@@ -210,8 +210,12 @@ export async function generateNumbersWithStrategy(
   const minNumber = lotteryConfig.minNumber;
   const maxNumber = lotteryConfig.maxNumber;
   
+  console.log(`[GENERATOR] Lottery: ${lotteryType}, Range: ${minNumber}-${maxNumber}, Count: ${numbersCount}`);
+  
   const config = getStrategyConfig(strategy, numbersCount);
+  console.log(`[GENERATOR] Fetching frequency data...`);
   const frequency = await calculateFrequencyFromDB(100, lotteryType as any);
+  console.log(`[GENERATOR] Frequency data length: ${frequency.length}`);
   const delayed = await getDelayedNumbers(30, lotteryType);
 
   // Separa números por categoria
