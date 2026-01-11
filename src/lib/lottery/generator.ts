@@ -216,6 +216,26 @@ export async function generateNumbersWithStrategy(
   console.log(`[GENERATOR] Fetching frequency data...`);
   const frequency = await calculateFrequencyFromDB(100, lotteryType as any);
   console.log(`[GENERATOR] Frequency data length: ${frequency.length}`);
+  
+  // FALLBACK: Se não há dados históricos, gera números puramente aleatórios
+  if (frequency.length === 0 || frequency.every(f => f.frequency === 0)) {
+    console.log(`[GENERATOR] No historical data, using pure random generation`);
+    const randomNumbers: number[] = [];
+    const used = new Set<number>();
+    
+    while (randomNumbers.length < numbersCount) {
+      const num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+      if (!used.has(num)) {
+        used.add(num);
+        randomNumbers.push(num);
+      }
+    }
+    
+    randomNumbers.sort((a, b) => a - b);
+    const stats = calculateGameStats(randomNumbers, []);
+    return { numbers: randomNumbers, stats };
+  }
+  
   const delayed = await getDelayedNumbers(30, lotteryType);
 
   // Separa números por categoria
