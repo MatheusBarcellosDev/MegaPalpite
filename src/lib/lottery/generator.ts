@@ -337,8 +337,13 @@ function rebalance(
 
   let targetCount = result.filter(isTarget).length;
 
-  // Tenta equilibrar para 3 de cada
-  while (targetCount < 2 || targetCount > 4) {
+  // Tenta equilibrar para 3 de cada (com limite de iterações para evitar loop infinito)
+  let iterations = 0;
+  const maxIterations = 50;
+  
+  while ((targetCount < 2 || targetCount > 4) && iterations < maxIterations) {
+    iterations++;
+    
     if (targetCount < 2) {
       // Precisa de mais números do tipo alvo
       const toRemove = result.find((n) => !isTarget(n));
@@ -348,6 +353,8 @@ function rebalance(
           .filter((n: number) => isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
+        } else {
+          break; // Não há mais candidatos, sai do loop
         }
       }
     } else if (targetCount > 4) {
@@ -359,6 +366,8 @@ function rebalance(
           .filter((n: number) => !isTarget(n) && !result.includes(n));
         if (candidates.length > 0) {
           result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
+        } else {
+          break; // Não há mais candidatos, sai do loop
         }
       }
     }
