@@ -7,6 +7,12 @@
  * Execute: npx tsx scripts/populate-historical.ts
  */
 
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Carrega variáveis de ambiente do .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
+
 import { prisma } from '../src/lib/prisma';
 
 const CAIXA_API_BASE = "https://servicebus2.caixa.gov.br/portaldeloterias/api";
