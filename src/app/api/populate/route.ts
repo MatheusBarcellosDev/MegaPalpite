@@ -25,6 +25,7 @@ function parseDate(dateStr: string): Date {
 }
 
 async function fetchContest(lotteryType: LotteryType, contestNumber: number): Promise<ContestData | null> {
+  // Try Caixa API first
   try {
     const response = await fetch(`${CAIXA_API_BASE}/${lotteryType}/${contestNumber}`, {
       headers: {
@@ -39,8 +40,34 @@ async function fetchContest(lotteryType: LotteryType, contestNumber: number): Pr
       return await response.json();
     }
   } catch (e) {
-    console.error(`Erro buscar contest ${contestNumber}:`, e);
+    // Silently try fallback
   }
+
+  // Try fallback API (loteriascaixa-api)
+  try {
+    const fallbackUrl = `https://loteriascaixa-api.herokuapp.com/api/${lotteryType}/${contestNumber}`;
+    const response = await fetch(fallbackUrl, {
+      headers: { "Accept": "application/json" },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      // Map to our format
+      return {
+        numero: data.concurso || contestNumber,
+        dataApuracao: data.data,
+        dataProximoConcurso: data.dataProximoConcurso,
+        listaDezenas: data.dezenas || data.listaDezenas,
+        valorAcumuladoProximoConcurso: data.valorAcumuladoProximoConcurso || 0,
+        valorEstimadoProximoConcurso: data.valorEstimadoProximoConcurso || 0,
+        acumulado: data.acumulou || data.acumulado,
+        listaRateioPremio: data.premiacoes || data.listaRateioPremio,
+      };
+    }
+  } catch (e) {
+    console.error(`Ambas APIs falharam para contest ${contestNumber}`);
+  }
+
   return null;
 }
 
