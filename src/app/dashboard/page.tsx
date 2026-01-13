@@ -200,7 +200,7 @@ export default async function DashboardPage() {
               </Button>
             </Link>
           </div>
-          <GameList games={recentGames} />
+          <GameList games={recentGames} showResults={true} />
         </section>
       )}
     </div>
