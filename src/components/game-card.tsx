@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { NumberBall } from "@/components/number-balls";
 import { Calendar, ChevronRight, Trophy } from "lucide-react";
 import { GameWithResult } from "@/lib/lottery/types";
+import { getLotteryConfig, LotteryType } from "@/lib/lottery/types-config";
 
 interface GameCardProps {
   game: GameWithResult;
@@ -24,20 +25,28 @@ export function GameCard({ game, showResult = false }: GameCardProps) {
 
   const getStatusBadge = () => {
     if (game.hits !== undefined) {
-      if (game.hits === 6) {
+      const lotteryType = (game.lotteryType as LotteryType) || "megasena";
+      const config = getLotteryConfig(lotteryType);
+      
+      // Jackpot match (max hits)
+      if (game.hits === config.maxHits) {
         return (
-          <Badge className="bg-amber-500 text-black">
-            <Trophy className="h-3 w-3 mr-1" /> Sena!
+          <Badge className="bg-amber-500 text-black hover:bg-amber-600">
+            <Trophy className="h-3 w-3 mr-1" /> {config.name}!
           </Badge>
         );
       }
-      if (game.hits >= 4) {
+      
+      // Winning tier (min hits to win)
+      if (game.hits >= config.minHitsToWin) {
         return (
-          <Badge className="bg-emerald-500 text-black">
-            {game.hits} acertos
+          <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600">
+            <Trophy className="h-3 w-3 mr-1" /> {game.hits} acertos
           </Badge>
         );
       }
+      
+      // Non-winning
       return (
         <Badge variant="secondary">
           {game.hits} {game.hits === 1 ? "acerto" : "acertos"}
