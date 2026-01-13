@@ -214,7 +214,9 @@ export async function generateNumbersWithStrategy(
   
   const config = getStrategyConfig(strategy, numbersCount);
   console.log(`[GENERATOR] Fetching frequency data...`);
-  const frequency = await calculateFrequencyFromDB(100, lotteryType as any);
+  // Analisa 500 concursos para Lotofácil, 100 para outras
+  const analysisDepth = lotteryType === "lotofacil" ? 500 : 100;
+  const frequency = await calculateFrequencyFromDB(analysisDepth, lotteryType as any);
   console.log(`[GENERATOR] Frequency data length: ${frequency.length}`);
   
   // FALLBACK: Se não há dados históricos, gera números puramente aleatórios
