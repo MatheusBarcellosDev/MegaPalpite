@@ -307,20 +307,36 @@ function applyStatisticalConstraints(
   let result = [...numbers];
   const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
 
-  // Verifica equilíbrio par/ímpar (2-4 de cada)
+  // Configurações dinâmicas baseadas no tamanho do jogo
+  const isLotofacil = maxNumber === 25 && numbers.length === 15;
+  const isQuina = maxNumber === 80 && numbers.length === 5;
+  
+  // High/Low threshold (metade do range)
+  const highLowThreshold = Math.floor(maxNumber / 2);
+  
+  // Faixas aceitáveis (baseado na média probabilística)
+  // Para Mega-Sena (6): média 3. Aceitável 2-4.
+  // Para Lotofácil (15): média 7.5. Aceitável 5-10.
+  // Para Quina (5): média 2.5. Aceitável 1-4.
+  const targetMin = Math.floor(numbers.length * 0.33); // 1/3
+  const targetMax = Math.ceil(numbers.length * 0.66);  // 2/3
+  
+  // Verifica equilíbrio par/ímpar
   const oddCount = result.filter((n: number) => n % 2 === 1).length;
-  if (oddCount < 2 || oddCount > 4) {
-    result = rebalance(result, frequencyMap, "oddEven", minNumber, maxNumber);
+  if (oddCount < targetMin || oddCount > targetMax) {
+    result = rebalance(result, frequencyMap, "oddEven", minNumber, maxNumber, targetMin, targetMax, highLowThreshold);
   }
 
-  // Verifica equilíbrio alto/baixo (2-4 de cada)
-  const lowCount = result.filter((n: number) => n <= 30).length;
-  if (lowCount < 2 || lowCount > 4) {
-    result = rebalance(result, frequencyMap, "highLow", minNumber, maxNumber);
+  // Verifica equilíbrio alto/baixo
+  const lowCount = result.filter((n: number) => n <= highLowThreshold).length;
+  if (lowCount < targetMin || lowCount > targetMax) {
+    result = rebalance(result, frequencyMap, "highLow", minNumber, maxNumber, targetMin, targetMax, highLowThreshold);
   }
 
-  // Evita mais de 2 consecutivos
-  result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber);
+  // Evita sequências excessivas
+  // Mega-Sena: max 2. Lotofácil: max 4 ou 5 é normal.
+  const maxSeq = isLotofacil ? 4 : 2;
+  result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber, maxSeq);
 
   return result;
 }
@@ -330,23 +346,26 @@ function rebalance(
   frequencyMap: Map<number, NumberFrequency>,
   type: "oddEven" | "highLow",
   minNumber: number,
-  maxNumber: number
+  maxNumber: number,
+  targetMin: number,
+  targetMax: number,
+  highLowThreshold: number
 ): number[] {
   const result = [...numbers];
   const isTarget = type === "oddEven" 
     ? (n: number) => n % 2 === 1 
-    : (n: number) => n <= 30;
+    : (n: number) => n <= highLowThreshold;
 
   let targetCount = result.filter(isTarget).length;
 
-  // Tenta equilibrar para 3 de cada (com limite de iterações para evitar loop infinito)
+  // Tenta equilibrar (com limite de iterações para evitar loop infinito)
   let iterations = 0;
   const maxIterations = 50;
   
-  while ((targetCount < 2 || targetCount > 4) && iterations < maxIterations) {
+  while ((targetCount < targetMin || targetCount > targetMax) && iterations < maxIterations) {
     iterations++;
     
-    if (targetCount < 2) {
+    if (targetCount < targetMin) {
       // Precisa de mais números do tipo alvo
       const toRemove = result.find((n) => !isTarget(n));
       if (toRemove !== undefined) {
@@ -359,7 +378,7 @@ function rebalance(
           break; // Não há mais candidatos, sai do loop
         }
       }
-    } else if (targetCount > 4) {
+    } else if (targetCount > targetMax) {
       // Precisa de menos números do tipo alvo
       const toRemove = result.find(isTarget);
       if (toRemove !== undefined) {
@@ -383,7 +402,8 @@ function removeExcessiveSequentials(
   numbers: number[],
   frequencyMap: Map<number, NumberFrequency>,
   minNumber: number,
-  maxNumber: number
+  maxNumber: number,
+  maxSeq: number
 ): number[] {
   const sorted = [...numbers].sort((a: number, b: number) => a - b);
   
@@ -401,7 +421,7 @@ function removeExcessiveSequentials(
   }
 
   // Se mais de 2 consecutivos, substitui um
-  if (maxSequence > 2) {
+  if (maxSequence > maxSeq) {
     // Encontra o número do meio da sequência e substitui
     for (let i = 1; i < sorted.length - 1; i++) {
       if (sorted[i] === sorted[i - 1] + 1 && sorted[i] === sorted[i + 1] - 1) {
@@ -426,8 +446,9 @@ function calculateGameStats(
 
   const oddCount = numbers.filter((n: number) => n % 2 === 1).length;
   const evenCount = 6 - oddCount;
-  const lowCount = numbers.filter((n: number) => n <= 30).length;
-  const highCount = 6 - lowCount;
+  const highLowThreshold = Math.floor(Math.max(...frequency.map(f => f.number)) / 2) || 30;
+  const lowCount = numbers.filter((n: number) => n <= highLowThreshold).length;
+  const highCount = numbers.length - lowCount;
   const sum = numbers.reduce((a: number, b: number) => a + b, 0);
   
   // Conta consecutivos
