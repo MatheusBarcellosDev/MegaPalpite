@@ -3,7 +3,7 @@ import { NumberFrequency, GenerationStats } from "./types";
 import { LotteryType, getLotteryConfig } from "./types-config";
 
 // Estratégias disponíveis
-export type GenerationStrategy = "balanced" | "hot" | "cold" | "mixed";
+export type GenerationStrategy = "balanced" | "hot" | "cold" | "mixed" | "repeater";
 
 interface StrategyConfig {
   name: string;
@@ -19,6 +19,7 @@ const STRATEGY_RATIOS: Record<GenerationStrategy, { hot: number; cold: number; b
   hot: { hot: 0.66, cold: 0.17, balanced: 0.17 },
   cold: { hot: 0.17, cold: 0.66, balanced: 0.17 },
   mixed: { hot: 0.33, cold: 0.33, balanced: 0.34 },
+  repeater: { hot: 0.0, cold: 0.0, balanced: 0.0 }, // Custom logic used
 };
 
 function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): StrategyConfig {
@@ -44,6 +45,10 @@ function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): 
       name: "Aleatório Inteligente",
       description: "Seleção aleatória respeitando padrões estatísticos",
     },
+    repeater: {
+      name: "Repetição Inteligente",
+      description: "Baseado na tendência de repetição do último sorteio",
+    },
   };
   
   return {
@@ -55,7 +60,7 @@ function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): 
 }
 
 export function getAvailableStrategies() {
-  return (["balanced", "hot", "cold", "mixed"] as GenerationStrategy[]).map(key => ({
+  return (["balanced", "hot", "cold", "mixed", "repeater"] as GenerationStrategy[]).map(key => ({
     id: key,
     name: getStrategyConfig(key, 6).name,
     description: getStrategyConfig(key, 6).description,
@@ -237,7 +242,52 @@ export async function generateNumbersWithStrategy(
     const stats = calculateGameStats(randomNumbers, []);
     return { numbers: randomNumbers, stats };
   }
+  }
   
+  // LOGIC FOR REPEATER STRATEGY
+  if (strategy === "repeater") {
+    // Get last contest numbers
+    const lastContest = await prisma.contest.findFirst({
+      where: { lotteryType, drawnNumbers: { isEmpty: false } },
+      orderBy: { id: "desc" },
+      select: { drawnNumbers: true }
+    });
+
+    if (lastContest?.drawnNumbers && lastContest.drawnNumbers.length > 0) {
+      const lastNumbers = lastContest.drawnNumbers;
+      
+      // Define how many to repeat based on lottery type
+      let repeatCount = 1; // Default for Mega and Quina
+      if (lotteryType === "lotofacil") repeatCount = 9; // Average 9 repeat for Lotofacil
+      
+      const selectedSet = new Set<number>();
+      
+      // Select numbers from valid last numbers (ensure they are within range)
+      const validLastNumbers = lastNumbers.filter(n => n >= minNumber && n <= maxNumber);
+      
+      const repeatCandidates = fisherYatesShuffle(validLastNumbers).slice(0, Math.min(repeatCount, validLastNumbers.length));
+      repeatCandidates.forEach(n => selectedSet.add(n));
+      
+      // Fill the rest from numbers NOT in last draw
+      const otherNumbers = Array.from({ length: maxNumber - minNumber + 1 }, (_: unknown, i: number) => i + minNumber)
+        .filter(n => !validLastNumbers.includes(n));
+        
+      const remainingCount = numbersCount - selectedSet.size;
+      const otherCandidates = fisherYatesShuffle(otherNumbers).slice(0, remainingCount);
+      otherCandidates.forEach(n => selectedSet.add(n));
+      
+      let numbers = Array.from(selectedSet).sort((a, b) => a - b);
+      
+      // Apply constraints (dynamic ones we just fixed)
+      numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber);
+      
+      numbers.sort((a, b) => a - b);
+      const stats = calculateGameStats(numbers, frequency);
+      return { numbers, stats };
+    }
+    // Fallback if no last contest
+  }
+
   const delayed = await getDelayedNumbers(30, lotteryType);
 
   // Separa números por categoria
