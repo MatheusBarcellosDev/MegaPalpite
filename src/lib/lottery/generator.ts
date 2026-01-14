@@ -242,7 +242,7 @@ export async function generateNumbersWithStrategy(
     const stats = calculateGameStats(randomNumbers, []);
     return { numbers: randomNumbers, stats };
   }
-  }
+
   
   // LOGIC FOR REPEATER STRATEGY
   if (strategy === "repeater") {

@@ -21,6 +21,7 @@ import {
   Scale,
   Shuffle,
   ExternalLink,
+  Repeat,
 } from "lucide-react";
 
 type Strategy = {
@@ -39,6 +40,7 @@ const strategyIcons: Record<string, React.ReactNode> = {
   hot: <Flame className="h-5 w-5" />,
   cold: <Snowflake className="h-5 w-5" />,
   mixed: <Shuffle className="h-5 w-5" />,
+  repeater: <Repeat className="h-5 w-5" />,
 };
 
 function GeneratePageContent() {
