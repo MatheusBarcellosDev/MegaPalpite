@@ -2,9 +2,17 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { NumberBall } from "@/components/number-balls";
-import { Calendar, ChevronRight, Trophy } from "lucide-react";
+import { Calendar, ChevronRight, Trophy, Sparkles, Flame, Snowflake, Scale, Shuffle, Repeat } from "lucide-react";
 import { GameWithResult } from "@/lib/lottery/types";
 import { getLotteryConfig, LotteryType } from "@/lib/lottery/types-config";
+
+const strategyConfig: Record<string, { icon: React.ReactNode; label: string }> = {
+  balanced: { icon: <Scale className="h-3 w-3" />, label: "Equilibrado" },
+  hot: { icon: <Flame className="h-3 w-3" />, label: "Quente" },
+  cold: { icon: <Snowflake className="h-3 w-3" />, label: "Frio" },
+  mixed: { icon: <Shuffle className="h-3 w-3" />, label: "Aleatório" },
+  repeater: { icon: <Repeat className="h-3 w-3" />, label: "Repetição" },
+};
 
 interface GameCardProps {
   game: GameWithResult;
@@ -100,6 +108,14 @@ export function GameCard({ game, showResult = false }: GameCardProps) {
                 {formatDate(game.createdAt)}
               </div>
               <span>Concurso {game.contestNumber}</span>
+              
+              {/* Strategy Badge */}
+              {game.strategy && strategyConfig[game.strategy] && (
+                <div className="flex items-center gap-1 text-primary">
+                  {strategyConfig[game.strategy].icon}
+                  <span>{strategyConfig[game.strategy].label}</span>
+                </div>
+              )}
             </div>
           </div>
 

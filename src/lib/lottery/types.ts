@@ -46,6 +46,7 @@ export interface GameWithResult {
   id: string;
   lotteryType?: string;
   numbers: number[];
+  strategy?: string; // balanced, hot, cold, mixed, repeater
   explanation: string | null;
   contestNumber: number;
   createdAt: string;

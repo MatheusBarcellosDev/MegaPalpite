@@ -13,6 +13,7 @@ model Game {
   lotteryType   String   @default("megasena") @map("lottery_type")
   numbers       Int[]
   explanation   String?
+  strategy      String?  @default("balanced") // 'balanced', 'hot', 'cold', 'mixed', 'repeater'
   contestNumber Int      @map("contest_number")
   createdAt     DateTime @default(now()) @map("created_at")
   result        Result?

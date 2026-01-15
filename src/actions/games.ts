@@ -84,6 +84,7 @@ export async function generateGame(
         lotteryType,
         numbers,
         explanation,
+        strategy,
         contestNumber,
       },
     });
@@ -110,7 +111,8 @@ export async function generateGame(
 export async function saveGame(
   numbers: number[],
   explanation: string,
-  contestNumber: number
+  contestNumber: number,
+  strategy: string = "balanced"
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient();
@@ -129,6 +131,7 @@ export async function saveGame(
         numbers,
         explanation,
         contestNumber,
+        strategy,
       },
     });
 
