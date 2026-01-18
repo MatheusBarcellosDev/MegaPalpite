@@ -68,5 +68,7 @@ export interface GenerationStats {
   highCount: number; // 31-60
   sum: number;
   consecutiveCount: number;
+  fibonacciCount: number; // New stats
+  frameCount: number;     // New stats
   avgFrequency: number;
 }

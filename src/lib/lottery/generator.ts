@@ -252,6 +252,9 @@ export async function generateNumbersWithStrategy(
       orderBy: { id: "desc" },
       select: { drawnNumbers: true }
     });
+    
+    // Store last numbers for use in constraints regardless of strategy
+    const lastContestNumbers = lastContest?.drawnNumbers || [];
 
     if (lastContest?.drawnNumbers && lastContest.drawnNumbers.length > 0) {
       const lastNumbers = lastContest.drawnNumbers;
@@ -279,7 +282,7 @@ export async function generateNumbersWithStrategy(
       let numbers = Array.from(selectedSet).sort((a, b) => a - b);
       
       // Apply constraints (dynamic ones we just fixed)
-      numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber);
+      numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers);
       
       numbers.sort((a, b) => a - b);
       const stats = calculateGameStats(numbers, frequency);
@@ -287,6 +290,14 @@ export async function generateNumbersWithStrategy(
     }
     // Fallback if no last contest
   }
+
+  // Get last contest numbers for general constraints even if not repeater strategy
+  const lastContest = await prisma.contest.findFirst({
+    where: { lotteryType, drawnNumbers: { isEmpty: false } },
+    orderBy: { id: "desc" },
+    select: { drawnNumbers: true }
+  });
+  const lastContestNumbers = lastContest?.drawnNumbers || [];
 
   const delayed = await getDelayedNumbers(30, lotteryType);
 
@@ -334,7 +345,7 @@ export async function generateNumbersWithStrategy(
   let numbers = Array.from(selected);
 
   // Aplica restrições estatísticas
-  numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber);
+  numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers);
 
   // Ordena os números
   numbers.sort((a, b) => a - b);
@@ -354,7 +365,8 @@ function applyStatisticalConstraints(
   numbers: number[],
   frequency: NumberFrequency[],
   minNumber: number,
-  maxNumber: number
+  maxNumber: number,
+  lastDraw: number[] = []
 ): number[] {
   let result = [...numbers];
   const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
@@ -365,9 +377,9 @@ function applyStatisticalConstraints(
   // High/Low threshold (metade do range)
   const highLowThreshold = Math.floor(maxNumber / 2);
   
-  // Faixas aceitáveis (baseado na média probabilística)
-  let targetMin = Math.floor(numbers.length * 0.33); // Default 1/3
-  let targetMax = Math.ceil(numbers.length * 0.66);  // Default 2/3
+  // Faixas aceitáveis padrão
+  let targetMin = Math.floor(numbers.length * 0.33); 
+  let targetMax = Math.ceil(numbers.length * 0.66);  
   
   // REGRAS RÍGIDAS PARA LOTOFÁCIL
   if (isLotofacil) {
@@ -375,14 +387,13 @@ function applyStatisticalConstraints(
       targetMax = 9; // Máximo 9 ímpares
   }
   
-  // Verifica equilíbrio par/ímpar
+  // 1. Verifica equilíbrio par/ímpar
   const oddCount = result.filter((n: number) => n % 2 === 1).length;
   if (oddCount < targetMin || oddCount > targetMax) {
     result = rebalance(result, frequencyMap, "oddEven", minNumber, maxNumber, targetMin, targetMax, highLowThreshold);
   }
 
-  // Verifica equilíbrio alto/baixo (apenas se não for Lotofácil, pois lá high/low é menos crítico que prime/odd)
-  // Mas mantemos com targets relaxados
+  // 2. Verifica equilíbrio alto/baixo (Skipped for Lotofacil to prioritize others)
   if (!isLotofacil) {
     const lowCount = result.filter((n: number) => n <= highLowThreshold).length;
     const lowMin = Math.floor(numbers.length * 0.33);
@@ -392,22 +403,94 @@ function applyStatisticalConstraints(
     }
   }
 
-  // Verifica Primos (Lotofácil apenas por enquanto)
   if (isLotofacil) {
+    // 3. Verifica Primos (4 a 6)
     const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
     let primeCount = result.filter(n => PRIMES.has(n)).length;
-    
-    // Target: 4, 5, or 6 primes
-    const primeMin = 4;
-    const primeMax = 6;
-    
-    if (primeCount < primeMin || primeCount > primeMax) {
-        result = rebalance(result, frequencyMap, "prime", minNumber, maxNumber, primeMin, primeMax, highLowThreshold);
+    if (primeCount < 4 || primeCount > 6) {
+        result = rebalance(result, frequencyMap, "prime", minNumber, maxNumber, 4, 6, highLowThreshold);
+    }
+
+    // 4. Verifica Moldura/Frame (9 a 11)
+    // Frame: 1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25
+    const FRAME = new Set([1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25]);
+    let frameCount = result.filter(n => FRAME.has(n)).length;
+    if (frameCount < 9 || frameCount > 11) {
+        result = rebalance(result, frequencyMap, "frame", minNumber, maxNumber, 9, 11, highLowThreshold);
+    }
+
+    // 5. Verifica Fibonacci (3 a 5)
+    // Fib: 1, 2, 3, 5, 8, 13, 21
+    const FIB = new Set([1, 2, 3, 5, 8, 13, 21]);
+    let fibCount = result.filter(n => FIB.has(n)).length;
+    if (fibCount < 3 || fibCount > 5) {
+        result = rebalance(result, frequencyMap, "fibonacci", minNumber, maxNumber, 3, 5, highLowThreshold);
+    }
+
+    // 6. Verifica Soma (180 a 220)
+    let sum = result.reduce((a, b) => a + b, 0);
+    let attempts = 0;
+    while ((sum < 180 || sum > 220) && attempts < 20) {
+        // Simple swap: if too low, swap lowest for higher free number. If too high, swap highest for lower free number.
+        if (sum < 180) {
+            const minVal = Math.min(...result);
+            const idx = result.indexOf(minVal);
+            const candidates = Array.from({length: 25}, (_, i) => i + 1).filter(n => !result.includes(n) && n > minVal);
+            if (candidates.length) {
+                result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+        } else {
+            const maxVal = Math.max(...result);
+            const idx = result.indexOf(maxVal);
+            const candidates = Array.from({length: 25}, (_, i) => i + 1).filter(n => !result.includes(n) && n < maxVal);
+            if (candidates.length) {
+                result[idx] = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+        }
+        sum = result.reduce((a, b) => a + b, 0);
+        attempts++;
+    }
+
+    // 7. Verifica Repetição do Anterior (8 a 10)
+    if (lastDraw.length > 0) {
+        const lastSet = new Set(lastDraw);
+        let repeatCount = result.filter(n => lastSet.has(n)).length;
+        if (repeatCount < 8 || repeatCount > 10) {
+             // Pass lastDraw as specific context if needed, but for now rebalance can theoretically handle it 
+             // if we define the set logic inside rebalance. 
+             // However, strictly passing context is cleaner. Let's adapt rebalance signature or handle inline.
+             // Inline is safer for this specific complexity.
+             attempts = 0;
+             while ((repeatCount < 8 || repeatCount > 10) && attempts < 20) {
+                 if (repeatCount < 8) {
+                     // Need MORE repeats -> Swap a non-repeat for a repeat candidate
+                     const nonRepeats = result.filter(n => !lastSet.has(n));
+                     if (nonRepeats.length > 0) {
+                         const toRemove = nonRepeats[Math.floor(Math.random() * nonRepeats.length)];
+                         const candidates = lastDraw.filter(n => !result.includes(n));
+                         if (candidates.length) {
+                             result[result.indexOf(toRemove)] = candidates[Math.floor(Math.random() * candidates.length)];
+                         }
+                     }
+                 } else {
+                     // Need FEWER repeats -> Swap a repeat for a non-repeat candidate
+                     const repeats = result.filter(n => lastSet.has(n));
+                     if (repeats.length > 0) {
+                         const toRemove = repeats[Math.floor(Math.random() * repeats.length)];
+                         const candidates = Array.from({length: 25}, (_, i) => i + 1).filter(n => !lastSet.has(n) && !result.includes(n));
+                         if (candidates.length) {
+                             result[result.indexOf(toRemove)] = candidates[Math.floor(Math.random() * candidates.length)];
+                         }
+                     }
+                 }
+                 repeatCount = result.filter(n => lastSet.has(n)).length;
+                 attempts++;
+             }
+        }
     }
   }
 
   // Evita sequências excessivas
-  // Mega-Sena: max 2. Lotofácil: max 4.
   const maxSeq = isLotofacil ? 4 : 2;
   result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber, maxSeq);
 
@@ -417,7 +500,7 @@ function applyStatisticalConstraints(
 function rebalance(
   numbers: number[],
   frequencyMap: Map<number, NumberFrequency>,
-  type: "oddEven" | "highLow" | "prime",
+  type: "oddEven" | "highLow" | "prime" | "frame" | "fibonacci",
   minNumber: number,
   maxNumber: number,
   targetMin: number,
@@ -426,13 +509,17 @@ function rebalance(
 ): number[] {
   const result = [...numbers];
   const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
+  const FRAME = new Set([1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25]);
+  const FIB = new Set([1, 2, 3, 5, 8, 13, 21]);
 
   let isTarget: (n: number) => boolean;
   
   if (type === "oddEven") isTarget = (n: number) => n % 2 === 1;
   else if (type === "highLow") isTarget = (n: number) => n <= highLowThreshold;
   else if (type === "prime") isTarget = (n: number) => PRIMES.has(n);
-  else isTarget = (n: number) => false; // Should not happen
+  else if (type === "frame") isTarget = (n: number) => FRAME.has(n);
+  else if (type === "fibonacci") isTarget = (n: number) => FIB.has(n);
+  else isTarget = (n: number) => false;
 
   let targetCount = result.filter(isTarget).length;
 
@@ -534,9 +621,16 @@ function calculateGameStats(
   let consecutiveCount = 0;
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i] === sorted[i - 1] + 1) {
-      consecutiveCount++;
     }
   }
+
+  // Count Fibonacci
+  const FIB = new Set([1, 2, 3, 5, 8, 13, 21]);
+  const fibonacciCount = numbers.filter(n => FIB.has(n)).length;
+
+  // Count Frame
+  const FRAME = new Set([1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25]);
+  const frameCount = numbers.filter(n => FRAME.has(n)).length;
 
   // Média de frequência dos números escolhidos
   const avgFrequency =
@@ -549,6 +643,8 @@ function calculateGameStats(
     highCount,
     sum,
     consecutiveCount,
+    fibonacciCount,
+    frameCount,
     avgFrequency,
   };
 }
