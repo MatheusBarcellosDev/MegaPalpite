@@ -342,6 +342,8 @@ export async function generateNumbersWithStrategy(
   // Calcula estatísticas do jogo gerado
   const stats = calculateGameStats(numbers, frequency);
 
+
+
   return { numbers, stats };
 }
 
@@ -359,17 +361,19 @@ function applyStatisticalConstraints(
 
   // Configurações dinâmicas baseadas no tamanho do jogo
   const isLotofacil = maxNumber === 25 && numbers.length === 15;
-  const isQuina = maxNumber === 80 && numbers.length === 5;
   
   // High/Low threshold (metade do range)
   const highLowThreshold = Math.floor(maxNumber / 2);
   
   // Faixas aceitáveis (baseado na média probabilística)
-  // Para Mega-Sena (6): média 3. Aceitável 2-4.
-  // Para Lotofácil (15): média 7.5. Aceitável 5-10.
-  // Para Quina (5): média 2.5. Aceitável 1-4.
-  const targetMin = Math.floor(numbers.length * 0.33); // 1/3
-  const targetMax = Math.ceil(numbers.length * 0.66);  // 2/3
+  let targetMin = Math.floor(numbers.length * 0.33); // Default 1/3
+  let targetMax = Math.ceil(numbers.length * 0.66);  // Default 2/3
+  
+  // REGRAS RÍGIDAS PARA LOTOFÁCIL
+  if (isLotofacil) {
+      targetMin = 7; // Mínimo 7 ímpares
+      targetMax = 9; // Máximo 9 ímpares
+  }
   
   // Verifica equilíbrio par/ímpar
   const oddCount = result.filter((n: number) => n % 2 === 1).length;
@@ -377,14 +381,33 @@ function applyStatisticalConstraints(
     result = rebalance(result, frequencyMap, "oddEven", minNumber, maxNumber, targetMin, targetMax, highLowThreshold);
   }
 
-  // Verifica equilíbrio alto/baixo
-  const lowCount = result.filter((n: number) => n <= highLowThreshold).length;
-  if (lowCount < targetMin || lowCount > targetMax) {
-    result = rebalance(result, frequencyMap, "highLow", minNumber, maxNumber, targetMin, targetMax, highLowThreshold);
+  // Verifica equilíbrio alto/baixo (apenas se não for Lotofácil, pois lá high/low é menos crítico que prime/odd)
+  // Mas mantemos com targets relaxados
+  if (!isLotofacil) {
+    const lowCount = result.filter((n: number) => n <= highLowThreshold).length;
+    const lowMin = Math.floor(numbers.length * 0.33);
+    const lowMax = Math.ceil(numbers.length * 0.66);
+    if (lowCount < lowMin || lowCount > lowMax) {
+        result = rebalance(result, frequencyMap, "highLow", minNumber, maxNumber, lowMin, lowMax, highLowThreshold);
+    }
+  }
+
+  // Verifica Primos (Lotofácil apenas por enquanto)
+  if (isLotofacil) {
+    const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
+    let primeCount = result.filter(n => PRIMES.has(n)).length;
+    
+    // Target: 4, 5, or 6 primes
+    const primeMin = 4;
+    const primeMax = 6;
+    
+    if (primeCount < primeMin || primeCount > primeMax) {
+        result = rebalance(result, frequencyMap, "prime", minNumber, maxNumber, primeMin, primeMax, highLowThreshold);
+    }
   }
 
   // Evita sequências excessivas
-  // Mega-Sena: max 2. Lotofácil: max 4 ou 5 é normal.
+  // Mega-Sena: max 2. Lotofácil: max 4.
   const maxSeq = isLotofacil ? 4 : 2;
   result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber, maxSeq);
 
@@ -394,7 +417,7 @@ function applyStatisticalConstraints(
 function rebalance(
   numbers: number[],
   frequencyMap: Map<number, NumberFrequency>,
-  type: "oddEven" | "highLow",
+  type: "oddEven" | "highLow" | "prime",
   minNumber: number,
   maxNumber: number,
   targetMin: number,
@@ -402,9 +425,14 @@ function rebalance(
   highLowThreshold: number
 ): number[] {
   const result = [...numbers];
-  const isTarget = type === "oddEven" 
-    ? (n: number) => n % 2 === 1 
-    : (n: number) => n <= highLowThreshold;
+  const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
+
+  let isTarget: (n: number) => boolean;
+  
+  if (type === "oddEven") isTarget = (n: number) => n % 2 === 1;
+  else if (type === "highLow") isTarget = (n: number) => n <= highLowThreshold;
+  else if (type === "prime") isTarget = (n: number) => PRIMES.has(n);
+  else isTarget = (n: number) => false; // Should not happen
 
   let targetCount = result.filter(isTarget).length;
 
