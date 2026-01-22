@@ -455,14 +455,14 @@ function applyStatisticalConstraints(
     if (lastDraw.length > 0) {
         const lastSet = new Set(lastDraw);
         let repeatCount = result.filter(n => lastSet.has(n)).length;
-        if (repeatCount < 8 || repeatCount > 10) {
+        if (repeatCount < 7 || repeatCount > 10) {
              // Pass lastDraw as specific context if needed, but for now rebalance can theoretically handle it 
              // if we define the set logic inside rebalance. 
              // However, strictly passing context is cleaner. Let's adapt rebalance signature or handle inline.
              // Inline is safer for this specific complexity.
              attempts = 0;
-             while ((repeatCount < 8 || repeatCount > 10) && attempts < 20) {
-                 if (repeatCount < 8) {
+             while ((repeatCount < 7 || repeatCount > 10) && attempts < 20) {
+                 if (repeatCount < 7) {
                      // Need MORE repeats -> Swap a non-repeat for a repeat candidate
                      const nonRepeats = result.filter(n => !lastSet.has(n));
                      if (nonRepeats.length > 0) {
