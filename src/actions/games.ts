@@ -57,9 +57,55 @@ export async function generateGame(
     const contestNumber = await getNextContestNumber(lotteryType);
     console.log(`[GENERATE] Contest number: ${contestNumber}`);
 
-    // Generate numbers using selected strategy
+    // Get recently generated games for this contest to ensure diversity
+    const recentGames = await prisma.game.findMany({
+      where: { 
+        userId: user.id, 
+        contestNumber,
+        lotteryType
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { numbers: true }
+    });
+
+    // Generate numbers using selected strategy with diversity check
     console.log(`[GENERATE] Calling generateNumbersWithStrategy...`);
-    const { numbers, stats } = await generateNumbersWithStrategy(strategy, lotteryType);
+    
+    let numbers: number[] = [];
+    let stats: any;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
+    let valid = false;
+
+    while (!valid && attempts < MAX_ATTEMPTS) {
+      const result = await generateNumbersWithStrategy(strategy, lotteryType);
+      numbers = result.numbers;
+      stats = result.stats;
+      attempts++;
+
+      // Diversity Check
+      const maxOverlap = lotteryType === 'lotofacil' ? 12 : (lotteryType === 'megasena' ? 4 : 3);
+      
+      let tooSimilar = false;
+      for (const pastGame of recentGames) {
+        const intersection = numbers.filter(n => pastGame.numbers.includes(n)).length;
+        if (intersection > maxOverlap) {
+          tooSimilar = true;
+          console.log(`[GENERATE] Game too similar to past game (overlap ${intersection}). Retrying...`);
+          break;
+        }
+      }
+
+      if (!tooSimilar) {
+        valid = true;
+      }
+    }
+
+    if (!valid) {
+      console.warn(`[GENERATE] Could not generate distinct game after ${MAX_ATTEMPTS} attempts. Using last result.`);
+    }
+
     console.log(`[GENERATE] Generated numbers:`, numbers);
 
     // Calculate frequencies for explanation context
