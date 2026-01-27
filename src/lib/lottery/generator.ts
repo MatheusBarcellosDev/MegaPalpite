@@ -381,10 +381,10 @@ function applyStatisticalConstraints(
   let targetMin = Math.floor(numbers.length * 0.33); 
   let targetMax = Math.ceil(numbers.length * 0.66);  
   
-  // REGRAS RÍGIDAS PARA LOTOFÁCIL
+  // REGRAS OTIMIZADAS PARA LOTOFÁCIL (Baseado em 500 jogos)
   if (isLotofacil) {
-      targetMin = 7; // Mínimo 7 ímpares
-      targetMax = 9; // Máximo 9 ímpares
+      targetMin = 6; // Mínimo 6 ímpares (era 7)
+      targetMax = 10; // Máximo 10 ímpares (era 9)
   }
   
   // 1. Verifica equilíbrio par/ímpar
@@ -404,11 +404,11 @@ function applyStatisticalConstraints(
   }
 
   if (isLotofacil) {
-    // 3. Verifica Primos (4 a 6)
+    // 3. Verifica Primos (3 a 7) - OTIMIZADO
     const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
     let primeCount = result.filter(n => PRIMES.has(n)).length;
-    if (primeCount < 4 || primeCount > 6) {
-        result = rebalance(result, frequencyMap, "prime", minNumber, maxNumber, 4, 6, highLowThreshold);
+    if (primeCount < 3 || primeCount > 7) {
+        result = rebalance(result, frequencyMap, "prime", minNumber, maxNumber, 3, 7, highLowThreshold);
     }
 
     // 4. Verifica Moldura/Frame (9 a 11)
@@ -419,18 +419,18 @@ function applyStatisticalConstraints(
         result = rebalance(result, frequencyMap, "frame", minNumber, maxNumber, 9, 11, highLowThreshold);
     }
 
-    // 5. Verifica Fibonacci (3 a 5)
+    // 5. Verifica Fibonacci (2 a 6) - OTIMIZADO
     // Fib: 1, 2, 3, 5, 8, 13, 21
     const FIB = new Set([1, 2, 3, 5, 8, 13, 21]);
     let fibCount = result.filter(n => FIB.has(n)).length;
-    if (fibCount < 3 || fibCount > 5) {
-        result = rebalance(result, frequencyMap, "fibonacci", minNumber, maxNumber, 3, 5, highLowThreshold);
+    if (fibCount < 2 || fibCount > 6) {
+        result = rebalance(result, frequencyMap, "fibonacci", minNumber, maxNumber, 2, 6, highLowThreshold);
     }
 
-    // 6. Verifica Soma (180 a 220)
+    // 6. Verifica Soma (170 a 220) - OTIMIZADO
     let sum = result.reduce((a, b) => a + b, 0);
     let attempts = 0;
-    while ((sum < 180 || sum > 220) && attempts < 20) {
+    while ((sum < 170 || sum > 220) && attempts < 20) {
         // Simple swap: if too low, swap lowest for higher free number. If too high, swap highest for lower free number.
         if (sum < 180) {
             const minVal = Math.min(...result);
@@ -451,17 +451,13 @@ function applyStatisticalConstraints(
         attempts++;
     }
 
-    // 7. Verifica Repetição do Anterior (8 a 10)
+    // 7. Verifica Repetição do Anterior (7 a 11) - OTIMIZADO
     if (lastDraw.length > 0) {
         const lastSet = new Set(lastDraw);
         let repeatCount = result.filter(n => lastSet.has(n)).length;
-        if (repeatCount < 7 || repeatCount > 10) {
-             // Pass lastDraw as specific context if needed, but for now rebalance can theoretically handle it 
-             // if we define the set logic inside rebalance. 
-             // However, strictly passing context is cleaner. Let's adapt rebalance signature or handle inline.
-             // Inline is safer for this specific complexity.
+        if (repeatCount < 7 || repeatCount > 11) {
              attempts = 0;
-             while ((repeatCount < 7 || repeatCount > 10) && attempts < 20) {
+             while ((repeatCount < 7 || repeatCount > 11) && attempts < 20) {
                  if (repeatCount < 7) {
                      // Need MORE repeats -> Swap a non-repeat for a repeat candidate
                      const nonRepeats = result.filter(n => !lastSet.has(n));
