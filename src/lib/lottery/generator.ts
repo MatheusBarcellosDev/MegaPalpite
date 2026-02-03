@@ -64,7 +64,7 @@ function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): 
 }
 
 export function getAvailableStrategies() {
-  return (["balanced", "hot", "cold", "mixed", "repeater"] as GenerationStrategy[]).map(key => ({
+  return (["balanced", "hot", "cold", "mixed", "repeater", "pureRandom"] as GenerationStrategy[]).map(key => ({
     id: key,
     name: getStrategyConfig(key, 6).name,
     description: getStrategyConfig(key, 6).description,
