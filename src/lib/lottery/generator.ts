@@ -3,7 +3,7 @@ import { NumberFrequency, GenerationStats } from "./types";
 import { LotteryType, getLotteryConfig } from "./types-config";
 
 // Estratégias disponíveis
-export type GenerationStrategy = "balanced" | "hot" | "cold" | "mixed" | "repeater";
+export type GenerationStrategy = "balanced" | "hot" | "cold" | "mixed" | "repeater" | "pureRandom";
 
 interface StrategyConfig {
   name: string;
@@ -13,13 +13,13 @@ interface StrategyConfig {
   balancedNumbers: number; // Quantos números equilibrados
 }
 
-// Strategy configs will be scaled based on lottery's numbersCount
 const STRATEGY_RATIOS: Record<GenerationStrategy, { hot: number; cold: number; balanced: number }> = {
   balanced: { hot: 0.33, cold: 0.33, balanced: 0.34 },
   hot: { hot: 0.66, cold: 0.17, balanced: 0.17 },
   cold: { hot: 0.17, cold: 0.66, balanced: 0.17 },
   mixed: { hot: 0.33, cold: 0.33, balanced: 0.34 },
   repeater: { hot: 0.0, cold: 0.0, balanced: 0.0 }, // Custom logic used
+  pureRandom: { hot: 0.0, cold: 0.0, balanced: 0.0 }, // Pure random - no filters
 };
 
 function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): StrategyConfig {
@@ -48,6 +48,10 @@ function getStrategyConfig(strategy: GenerationStrategy, numbersCount: number): 
     repeater: {
       name: "Repetição Inteligente",
       description: "Baseado na tendência de repetição do último sorteio",
+    },
+    pureRandom: {
+      name: "Aleatório Puro",
+      description: "Números 100% aleatórios, sem nenhum filtro estatístico",
     },
   };
   
@@ -240,6 +244,25 @@ export async function generateNumbersWithStrategy(
     
     randomNumbers.sort((a, b) => a - b);
     const stats = calculateGameStats(randomNumbers, []);
+    return { numbers: randomNumbers, stats };
+  }
+
+  // PURE RANDOM STRATEGY - No filters, just random numbers (only for Lotofácil)
+  if (strategy === "pureRandom" && lotteryType === "lotofacil") {
+    console.log(`[GENERATOR] Pure random mode - no filters applied`);
+    const randomNumbers: number[] = [];
+    const used = new Set<number>();
+    
+    while (randomNumbers.length < numbersCount) {
+      const num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+      if (!used.has(num)) {
+        used.add(num);
+        randomNumbers.push(num);
+      }
+    }
+    
+    randomNumbers.sort((a, b) => a - b);
+    const stats = calculateGameStats(randomNumbers, frequency);
     return { numbers: randomNumbers, stats };
   }
 
