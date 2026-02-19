@@ -91,7 +91,7 @@ export default async function DashboardPage() {
                   nextDrawDate.setUTCHours(23, 0, 0, 0);
                   const now = new Date();
                   // Concurso fecha 3 horas antes do sorteio (17:00 BRT)
-                  const closingTime = new Date(nextDrawDate.getTime() - (3 * 60 * 60 * 1000));
+                  const closingTime = new Date(nextDrawDate.getTime() - (1 * 60 * 60 * 1000));
                   const isContestClosed = now > closingTime;
                   
                   return (
