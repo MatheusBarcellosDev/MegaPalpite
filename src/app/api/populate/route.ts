@@ -106,8 +106,13 @@ export async function GET(request: Request) {
   for (let contestNumber = start; contestNumber <= end; contestNumber++) {
     try {
       // Verifica se já existe
-      const existing = await prisma.contest.findUnique({
-        where: { id: contestNumber },
+      const existing: any = await prisma.contest.findUnique({
+        where: {
+          lotteryType_id: {
+            lotteryType: lottery as string,
+            id: contestNumber,
+          },
+        },
       });
 
       if (existing && existing.lotteryType === lottery) {

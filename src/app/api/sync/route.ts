@@ -180,7 +180,7 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
   
   // Check if already exists
   const existing = await prisma.contest.findUnique({
-    where: { id: contest.numero },
+    where: { lotteryType_id: { lotteryType, id: contest.numero } },
   });
 
   const isNew = !existing;
@@ -192,7 +192,7 @@ async function syncLottery(lotteryType: LotteryType): Promise<{
   if (existing) {
     console.log(`♻️  Updating existing contest ${contest.numero} for ${lotteryType}`);
     await prisma.contest.update({
-      where: { id: contest.numero },
+      where: { lotteryType_id: { lotteryType, id: contest.numero } },
       data: {
         drawnNumbers,
         nextDrawDate: contest.dataProximoConcurso ? parseDate(contest.dataProximoConcurso) : null,

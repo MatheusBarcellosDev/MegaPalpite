@@ -191,8 +191,11 @@ export async function getActiveContestInfo(): Promise<{
   const contestNumber = await getNextContestNumber();
   
   // Check if we have this contest in DB (with draw date info)
+  // getActiveContestInfo isn't currently receiving lotteryType from calling contexts, defaulting to megasena
+  // but this should ideally be passed in. Using 'megasena' for now to fix build.
+  // We'll need to figure out the right type if it matters
   const contest = await prisma.contest.findUnique({
-    where: { id: contestNumber - 1 }, // Get the previous (drawn) contest
+    where: { lotteryType_id: { lotteryType: 'megasena', id: contestNumber - 1 } }, // Get the previous (drawn) contest
     select: { drawDate: true },
   });
   

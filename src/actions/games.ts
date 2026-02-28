@@ -216,7 +216,7 @@ export async function getUserGames(): Promise<GameWithResult[]> {
         
         // Get contest data if it exists
         const contest = await prisma.contest.findUnique({
-          where: { id: game.contestNumber },
+          where: { lotteryType_id: { lotteryType: game.lotteryType, id: game.contestNumber } },
           select: { drawnNumbers: true },
         });
         
@@ -309,7 +309,7 @@ export async function checkGameResults(): Promise<{
     for (const game of games) {
       // Get contest result from local database
       const contest = await prisma.contest.findUnique({
-        where: { id: game.contestNumber },
+        where: { lotteryType_id: { lotteryType: game.lotteryType, id: game.contestNumber } },
         select: { drawnNumbers: true },
       });
 

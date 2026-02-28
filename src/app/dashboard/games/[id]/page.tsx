@@ -36,7 +36,7 @@ export default async function GameDetailPage({ params }: Props) {
 
   // Get contest info
   const contest = await prisma.contest.findUnique({
-    where: { id: game.contestNumber },
+    where: { lotteryType_id: { lotteryType: game.lotteryType, id: game.contestNumber } },
   });
 
   const formatDate = (date: Date) => {
