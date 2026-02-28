@@ -10,29 +10,30 @@ datasource db {
 model Game {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
-  lotteryType   String   @default("megasena") @map("lottery_type")
   numbers       Int[]
   explanation   String?
-  strategy      String?  @default("balanced") // 'balanced', 'hot', 'cold', 'mixed', 'repeater'
   contestNumber Int      @map("contest_number")
   createdAt     DateTime @default(now()) @map("created_at")
+  lotteryType   String   @default("megasena") @map("lottery_type")
+  strategy      String?  @default("balanced")
   result        Result?
 
   @@map("games")
 }
 
 model Contest {
-  id             Int      @id                           // Número do concurso
-  lotteryType    String   @default("megasena") @map("lottery_type")
-  drawDate       DateTime @map("draw_date")
-  nextDrawDate   DateTime? @map("next_draw_date")
-  drawnNumbers   Int[]    @map("drawn_numbers")
-  jackpotValue   Decimal  @map("jackpot_value")
-  isAccumulated  Boolean  @default(false) @map("is_accumulated")
-  nextJackpot    Decimal? @map("next_jackpot")
-  winnersData    Json?    @map("winners_data")          // JSON com ganhadores
-  fetchedAt      DateTime @default(now()) @map("fetched_at")
+  id            Int
+  drawDate      DateTime  @map("draw_date")
+  drawnNumbers  Int[]     @map("drawn_numbers")
+  jackpotValue  Decimal   @map("jackpot_value")
+  fetchedAt     DateTime  @default(now()) @map("fetched_at")
+  isAccumulated Boolean   @default(false) @map("is_accumulated")
+  nextJackpot   Decimal?  @map("next_jackpot")
+  winnersData   Json?     @map("winners_data")
+  lotteryType   String    @default("megasena") @map("lottery_type")
+  nextDrawDate  DateTime? @map("next_draw_date")
 
+  @@id([lotteryType, id])
   @@map("contests")
 }
 

@@ -305,7 +305,7 @@ export async function generateNumbersWithStrategy(
       let numbers = Array.from(selectedSet).sort((a, b) => a - b);
       
       // Apply constraints (dynamic ones we just fixed)
-      numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers);
+      numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers, strategy);
       
       numbers.sort((a, b) => a - b);
       const stats = calculateGameStats(numbers, frequency);
@@ -368,7 +368,7 @@ export async function generateNumbersWithStrategy(
   let numbers = Array.from(selected);
 
   // Aplica restrições estatísticas
-  numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers);
+  numbers = applyStatisticalConstraints(numbers, frequency, minNumber, maxNumber, lastContestNumbers, strategy);
 
   // Ordena os números
   numbers.sort((a, b) => a - b);
@@ -389,7 +389,8 @@ function applyStatisticalConstraints(
   frequency: NumberFrequency[],
   minNumber: number,
   maxNumber: number,
-  lastDraw: number[] = []
+  lastDraw: number[] = [],
+  strategy: GenerationStrategy = "balanced"
 ): number[] {
   let result = [...numbers];
   const frequencyMap = new Map(frequency.map((f: NumberFrequency) => [f.number, f]));
@@ -450,12 +451,14 @@ function applyStatisticalConstraints(
         result = rebalance(result, frequencyMap, "fibonacci", minNumber, maxNumber, 2, 6, highLowThreshold);
     }
 
-    // 6. Verifica Soma (170 a 220) - OTIMIZADO
+    // 6. Verifica Soma (180 a 210) - OTIMIZADO
+    let targetSumMin = 180;
+    let targetSumMax = 210;
     let sum = result.reduce((a, b) => a + b, 0);
     let attempts = 0;
-    while ((sum < 170 || sum > 220) && attempts < 20) {
+    while ((sum < targetSumMin || sum > targetSumMax) && attempts < 20) {
         // Simple swap: if too low, swap lowest for higher free number. If too high, swap highest for lower free number.
-        if (sum < 180) {
+        if (sum < targetSumMin) {
             const minVal = Math.min(...result);
             const idx = result.indexOf(minVal);
             const candidates = Array.from({length: 25}, (_, i) => i + 1).filter(n => !result.includes(n) && n > minVal);
@@ -474,14 +477,19 @@ function applyStatisticalConstraints(
         attempts++;
     }
 
-    // 7. Verifica Repetição do Anterior (7 a 11) - OTIMIZADO
+    // 7. Verifica Repetição do Anterior - OTIMIZADO
     if (lastDraw.length > 0) {
         const lastSet = new Set(lastDraw);
         let repeatCount = result.filter(n => lastSet.has(n)).length;
-        if (repeatCount < 7 || repeatCount > 11) {
+        
+        // Se for estratégia repeater, crava em 9 repetições. Senão, aceita de 8 a 10.
+        const minRepeats = strategy === "repeater" ? 9 : 8;
+        const maxRepeats = strategy === "repeater" ? 9 : 10;
+        
+        if (repeatCount < minRepeats || repeatCount > maxRepeats) {
              attempts = 0;
-             while ((repeatCount < 7 || repeatCount > 11) && attempts < 20) {
-                 if (repeatCount < 7) {
+             while ((repeatCount < minRepeats || repeatCount > maxRepeats) && attempts < 20) {
+                 if (repeatCount < minRepeats) {
                      // Need MORE repeats -> Swap a non-repeat for a repeat candidate
                      const nonRepeats = result.filter(n => !lastSet.has(n));
                      if (nonRepeats.length > 0) {
@@ -507,10 +515,54 @@ function applyStatisticalConstraints(
              }
         }
     }
+    
+    // 8. Verifica Linhas e Colunas (Garante que nenhuma linha ou coluna fique vazia)
+    let hasEmptyLineOrCol = true;
+    attempts = 0;
+    while (hasEmptyLineOrCol && attempts < 10) {
+      const lines = [0, 0, 0, 0, 0];
+      const cols = [0, 0, 0, 0, 0];
+      
+      result.forEach(n => {
+        const lineIdx = Math.floor((n - 1) / 5);
+        const colIdx = (n - 1) % 5;
+        lines[lineIdx]++;
+        cols[colIdx]++;
+      });
+      
+      const emptyLineIdx = lines.findIndex(count => count === 0);
+      const emptyColIdx = cols.findIndex(count => count === 0);
+      
+      if (emptyLineIdx === -1 && emptyColIdx === -1) {
+        hasEmptyLineOrCol = false; // Tudo certo, passou no teste
+      } else {
+        // Encontra o número em uma linha/coluna muito cheia e troca por um na vazia
+        // (Apenas uma troca simples para tentar equilibrar)
+        const toRemove = result[Math.floor(Math.random() * result.length)];
+        let candidate = -1;
+        
+        if (emptyLineIdx !== -1) {
+          // Precisa de um número na linha vazia
+          const minL = emptyLineIdx * 5 + 1;
+          const maxL = emptyLineIdx * 5 + 5;
+          const available = Array.from({length: 5}, (_, i) => i + minL).filter(n => !result.includes(n));
+          if (available.length > 0) candidate = available[Math.floor(Math.random() * available.length)];
+        } else if (emptyColIdx !== -1) {
+          // Precisa de um número na coluna vazia
+          const available = [1, 6, 11, 16, 21].map(n => n + emptyColIdx).filter(n => !result.includes(n));
+          if (available.length > 0) candidate = available[Math.floor(Math.random() * available.length)];
+        }
+        
+        if (candidate !== -1) {
+          result[result.indexOf(toRemove)] = candidate;
+        }
+      }
+      attempts++;
+    }
   }
 
   // Evita sequências excessivas
-  const maxSeq = isLotofacil ? 4 : 2;
+  const maxSeq = isLotofacil ? 6 : 3;
   result = removeExcessiveSequentials(result, frequencyMap, minNumber, maxNumber, maxSeq);
 
   return result;
